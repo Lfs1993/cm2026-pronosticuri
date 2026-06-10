@@ -125,8 +125,14 @@ export default function PredictionsGroupsPage() {
         <img src="/images/pronosticuri.jpeg" alt="Pronosticuri Grupe"
           className="h-full w-full object-cover object-center" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-gray-950" />
-        <div className="absolute inset-0 flex items-center justify-center">
+       <div className="absolute inset-0 flex items-center justify-center">
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">Pronosticuri Grupe</h1>
+          
+            href="/"
+            className="absolute left-4 bottom-4 rounded-full bg-black/40 border border-white/20 px-4 py-1.5 text-sm text-white/80 hover:bg-black/60 hover:text-white transition-all backdrop-blur-sm"
+          >
+            ← Înapoi
+          </a>
         </div>
       </div>
 
