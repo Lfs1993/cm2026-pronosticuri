@@ -1,13 +1,5 @@
-"use client";
-import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { AppShell } from "@/components/layout/app-shell";
-import { StatCard, MatchCard } from "@/components/cards";
-import { supabase } from "@/lib/supabase";
-import { FIXTURES } from "@/lib/fixtures";
-export default function DashboardPage() {
-  const [profile, setProfile] = useState<any>(null); const [predictionsCount, setPredictionsCount] = useState(0); const [resultsCount, setResultsCount] = useState(0);
-  useEffect(() => { async function load() { const { data: authData } = await supabase.auth.getUser(); const user = authData.user; if (!user) return (window.location.href = "/auth/login"); const { data: profileData } = await supabase.from("profiles").select("*").eq("id", user.id).single(); setProfile(profileData); const { count: predCount } = await supabase.from("predictions").select("*", { count: "exact", head: true }).eq("user_id", user.id); const { count: resCount } = await supabase.from("matches").select("*", { count: "exact", head: true }).eq("is_finished", true); setPredictionsCount(predCount ?? 0); setResultsCount(resCount ?? 0); } load(); }, []);
-  const nextMatches = useMemo(() => FIXTURES.filter((m: any) => new Date(m.kickoff_at) > new Date()).slice(0, 4), []);
-  return <AppShell><div className="grid gap-6"><section className="card p-6 md:p-8"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><div className="text-sm uppercase tracking-[0.3em] text-fifa-gold">Dashboard</div><h2 className="mt-2 text-3xl font-bold">Salut, {profile?.display_name ?? "prietene"} 👋</h2><p className="mt-2 max-w-2xl text-white/70">De aici intri rapid în grupe, eliminatorii, clasament și profil.</p></div><div className="flex gap-3"><Link href="/predictions/groups" className="btn-primary">Mergi la grupe</Link><Link href="/predictions/knockout" className="btn-secondary">Mergi la eliminatorii</Link></div></div></section><section className="grid gap-4 md:grid-cols-3"><StatCard label="Pronosticurile tale trimise" value={predictionsCount} /><StatCard label="Rezultate oficiale introduse" value={resultsCount} /><StatCard label="Meciuri totale în turneu" value={104} /></section><section><div className="mb-4 text-xl font-semibold">Următoarele meciuri</div><div className="grid gap-4 md:grid-cols-2">{nextMatches.map((match: any) => <MatchCard key={match.id} match={match as any} />)}</div></section></div></AppShell>;
+import { redirect } from "next/navigation";
+
+export default function DashboardRedirectPage() {
+  redirect("/groups");
 }
