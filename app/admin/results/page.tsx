@@ -298,7 +298,7 @@ export default function AdminResultsPage() {
                           <div key={pred.user_id}
                             className="flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-3 py-2">
                             <span className="text-xs text-white/70 truncate max-w-[80px]">
-                              {pred.profiles?.display_name ?? 'User'}
+                              {pred.profiles?.[0]?.display_name ?? 'User'}
                             </span>
                             <span className="text-sm font-bold text-white ml-2 shrink-0">
                               {pred.predicted_home} – {pred.predicted_away}
