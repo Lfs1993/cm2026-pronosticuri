@@ -17,14 +17,11 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main
-      className="min-h-screen px-4 py-10 text-white md:px-8"
-      style={{
-        backgroundImage: "linear-gradient(rgba(7,19,39,0.78), rgba(7,19,39,0.88)), url('/images/cupa-mondiala.jpg')",
-        backgroundSize: "cover",
-        backgroundPosition: "center",
-      }}
-    >
+    <main className="min-h-screen px-4 py-10 text-white md:px-8" style={{
+      backgroundImage: "linear-gradient(rgba(7,19,39,0.78), rgba(7,19,39,0.88)), url('/images/cupa-mondiala.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }}>
       <div className="mx-auto max-w-7xl">
         <section className="card overflow-hidden p-8 md:p-12">
           <div className="grid gap-10 lg:grid-cols-[1fr_0.95fr] lg:items-center">
@@ -46,7 +43,6 @@ export default function HomePage() {
                 )}
               </div>
             </div>
-
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/20 p-3">
               <div className="relative aspect-[16/10] overflow-hidden rounded-2xl">
                 <Image src="/images/cupa-mondiala.jpg" alt="Cupa Mondială" fill className="object-cover" priority />

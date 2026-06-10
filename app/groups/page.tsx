@@ -73,39 +73,34 @@ export default function GroupsCM2026Page() {
   const letters = useMemo(() => Object.keys(grouped.standings).sort(), [grouped]);
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.45), rgba(7,19,39,0.72)), url('/images/grupele-reference.jpg')", backgroundSize: "cover", backgroundPosition: "center top" }}>
+    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.35), rgba(7,19,39,0.80)), url('/images/grupele.jpg')", backgroundSize: "cover", backgroundPosition: "center" }}>
       <AppShell>
-        <section className="card p-6 md:p-8">
+        <section className="card p-6 md:p-8 bg-black/35">
           <h2 className="text-3xl font-bold">Grupele CM 2026</h2>
-          <p className="mt-2 text-white/80">Clasamente + scoruri actualizate din Admin.</p>
+          <p className="mt-2 text-white/85">Clasamente + scoruri actualizate din Admin.</p>
         </section>
 
         {loading ? <div className="mt-6 card p-6">Se încarcă...</div> : (
           <div className="mt-6 grid gap-5 xl:grid-cols-2">
             {letters.map((group) => (
-              <div key={group} className="rounded-[28px] bg-white/95 text-slate-900 p-6 shadow-sm">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <div className="text-sm text-slate-500">World Cup</div>
-                    <div className="text-xl font-semibold">Group {group}</div>
-                  </div>
+              <div key={group} className="rounded-[28px] border border-white/10 bg-[#091a33]/88 p-6 text-white shadow-sm backdrop-blur">
+                <div className="mb-4">
+                  <div className="text-sm text-white/60">World Cup</div>
+                  <div className="text-xl font-semibold">Group {group}</div>
                 </div>
-
-                <div className="grid grid-cols-[28px_1.8fr_repeat(6,44px)] items-center gap-2 border-b border-slate-200 pb-2 text-xs font-semibold text-slate-600">
+                <div className="grid grid-cols-[28px_1.8fr_repeat(6,44px)] items-center gap-2 border-b border-white/10 pb-2 text-xs font-semibold text-white/70">
                   <div></div><div>Team</div><div className="text-center">MP</div><div className="text-center">W</div><div className="text-center">D</div><div className="text-center">L</div><div className="text-center">GD</div><div className="text-center font-bold">Pts</div>
                 </div>
-
                 <div>
                   {grouped.standings[group].map((row, index) => (
-                    <div key={row.team} className="grid grid-cols-[28px_1.8fr_repeat(6,44px)] items-center gap-2 border-b border-slate-100 py-3 last:border-b-0">
+                    <div key={row.team} className="grid grid-cols-[28px_1.8fr_repeat(6,44px)] items-center gap-2 border-b border-white/5 py-3 last:border-b-0">
                       <div className="text-sm font-medium">{index + 1}</div>
-                      <div className="flex items-center gap-3 min-w-0"><span className="text-lg">{row.flag}</span><span className="text-[15px] font-medium">{row.team}</span></div>
-                      <div className="text-center text-sm">{row.mp}</div><div className="text-center text-sm">{row.w}</div><div className="text-center text-sm">{row.d}</div><div className="text-center text-sm">{row.l}</div><div className="text-center text-sm">{row.gd}</div><div className="text-center text-sm font-bold">{row.pts}</div>
+                      <div className="flex items-center gap-3"><span className="text-lg">{row.flag}</span><span className="text-[15px] font-medium">{row.team}</span></div>
+                      <div className="text-center text-sm">{row.mp}</div><div className="text-center text-sm">{row.w}</div><div className="text-center text-sm">{row.d}</div><div className="text-center text-sm">{row.l}</div><div className="text-center text-sm">{row.gd}</div><div className="text-center text-sm font-bold text-fifa-gold">{row.pts}</div>
                     </div>
                   ))}
                 </div>
-
-                <div className="mt-4 grid gap-2 rounded-2xl bg-slate-100 p-4 text-sm">
+                <div className="mt-4 grid gap-2 rounded-2xl bg-white/5 p-4 text-sm">
                   {(grouped.fixturesByGroup[group] || []).map((m) => (
                     <div key={m.id} className="flex items-center justify-between gap-3">
                       <span>{m.home_team} - {m.away_team}</span>

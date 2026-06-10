@@ -33,43 +33,14 @@ export default function ProfilePage() {
     setMessage("Profilul a fost actualizat.");
   }
 
-  async function logout() {
-    await supabase.auth.signOut();
-    window.location.href = "/auth/login";
-  }
+  async function logout() { await supabase.auth.signOut(); window.location.href = "/auth/login"; }
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.78), rgba(7,19,39,0.92)), url('/images/profil-worldcup.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.55), rgba(7,19,39,0.82)), url('/images/profil-worldcup.png')", backgroundSize: "cover", backgroundPosition: "center" }}>
       <AppShell>
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="card p-6 md:p-8">
-            <h2 className="text-3xl font-bold">Profil</h2>
-            <div className="mt-6 space-y-4">
-              <div>
-                <label className="mb-2 block text-sm text-white/70">Email</label>
-                <input className="input" disabled value={email} />
-              </div>
-              <div>
-                <label className="mb-2 block text-sm text-white/70">Numele afișat</label>
-                <input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-              </div>
-              {message ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">{message}</div> : null}
-              <div className="flex gap-3">
-                <button className="btn-primary" onClick={save}>Salvează profilul</button>
-                <button className="btn-secondary" onClick={logout}>Logout</button>
-              </div>
-            </div>
-          </div>
-
-          <div className="card p-6 md:p-8">
-            <h3 className="text-2xl font-bold">Statisticile tale live</h3>
-            <div className="mt-6 grid gap-4">
-              <div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Puncte totale</div><div className="mt-1 text-3xl font-bold text-fifa-gold">{stats.points}</div></div>
-              <div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Scoruri exacte</div><div className="mt-1 text-3xl font-bold">{stats.exact}</div></div>
-              <div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Rezultate corecte</div><div className="mt-1 text-3xl font-bold">{stats.outcomes}</div></div>
-              <div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Meciuri punctate</div><div className="mt-1 text-3xl font-bold">{stats.played}</div></div>
-            </div>
-          </div>
+          <div className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Profil</h2><div className="mt-6 space-y-4"><div><label className="mb-2 block text-sm text-white/70">Email</label><input className="input" disabled value={email} /></div><div><label className="mb-2 block text-sm text-white/70">Numele afișat</label><input className="input" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /></div>{message ? <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-100">{message}</div> : null}<div className="flex gap-3"><button className="btn-primary" onClick={save}>Salvează profilul</button><button className="btn-secondary" onClick={logout}>Logout</button></div></div></div>
+          <div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">Statisticile tale live</h3><div className="mt-6 grid gap-4"><div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Puncte totale</div><div className="mt-1 text-3xl font-bold text-fifa-gold">{stats.points}</div></div><div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Scoruri exacte</div><div className="mt-1 text-3xl font-bold">{stats.exact}</div></div><div className="rounded-2xl bg-white/5 p-4"><div className="text-sm text-white/70">Rezultate corecte</div><div className="mt-1 text-3xl font-bold">{stats.outcomes}</div></div></div></div>
         </div>
       </AppShell>
     </main>

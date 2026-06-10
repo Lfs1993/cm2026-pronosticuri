@@ -7,27 +7,16 @@ import { supabase } from "@/lib/supabase";
 import { FIXTURES } from "@/lib/fixtures";
 
 const LABELS: Record<string, string> = {
-  round32: "32-imi",
-  round16: "Optimi",
-  quarter: "Sferturi",
-  semi: "Semifinale",
-  third: "Finala mică",
-  final: "Finala",
+  round32: "32-imi", round16: "Optimi", quarter: "Sferturi", semi: "Semifinale", third: "Finala mică", final: "Finala",
 };
 
 export default function KnockoutPredictionsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [values, setValues] = useState<Record<string, { home: string; away: string }>>({});
-
   const grouped = useMemo(() => {
     const all = FIXTURES.filter((m: any) => m.stage !== "groups");
     return {
-      round32: all.filter((m: any) => m.stage === "round32"),
-      round16: all.filter((m: any) => m.stage === "round16"),
-      quarter: all.filter((m: any) => m.stage === "quarter"),
-      semi: all.filter((m: any) => m.stage === "semi"),
-      third: all.filter((m: any) => m.stage === "third"),
-      final: all.filter((m: any) => m.stage === "final"),
+      round32: all.filter((m: any) => m.stage === "round32"), round16: all.filter((m: any) => m.stage === "round16"), quarter: all.filter((m: any) => m.stage === "quarter"), semi: all.filter((m: any) => m.stage === "semi"), third: all.filter((m: any) => m.stage === "third"), final: all.filter((m: any) => m.stage === "final"),
     };
   }, []);
 
@@ -55,39 +44,14 @@ export default function KnockoutPredictionsPage() {
 
   function renderStage(stage: keyof typeof grouped) {
     if (!grouped[stage].length) return null;
-    return (
-      <section className="mt-6">
-        <div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">{LABELS[stage]}</h3></div>
-        <div className="mt-4 grid gap-4">
-          {grouped[stage].map((match: any) => (
-            <MatchCard key={match.id} match={match as any}>
-              <div className="flex flex-wrap items-center gap-3">
-                <input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.home ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} />
-                <span>-</span>
-                <input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.away ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} />
-                <button className="btn-primary" onClick={() => save(match)} disabled={new Date(match.lock_at) <= new Date()}>Salvează</button>
-                {new Date(match.lock_at) <= new Date() ? <span className="text-sm text-red-200">Deadline trecut</span> : null}
-              </div>
-            </MatchCard>
-          ))}
-        </div>
-      </section>
-    );
+    return <section className="mt-6"><div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">{LABELS[stage]}</h3></div><div className="mt-4 grid gap-4">{grouped[stage].map((match: any) => <MatchCard key={match.id} match={match as any}><div className="flex flex-wrap items-center gap-3"><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.home ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} /><span>-</span><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.away ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} /><button className="btn-primary" onClick={() => save(match)}>Salvează</button></div></MatchCard>)}</div></section>;
   }
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.75), rgba(7,19,39,0.92)), url('/images/pronosticuri.jpeg')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.58), rgba(7,19,39,0.88)), url('/images/pronosticuri.jpeg')", backgroundSize: "cover", backgroundPosition: "center" }}>
       <AppShell>
-        <section className="card p-6 md:p-8">
-          <h2 className="text-3xl font-bold">Pronosticuri Faze Eliminatorii</h2>
-          <p className="mt-2 text-white/70">Pronosticurile pentru toate rundele eliminatorii.</p>
-        </section>
-        {renderStage("round32")}
-        {renderStage("round16")}
-        {renderStage("quarter")}
-        {renderStage("semi")}
-        {renderStage("third")}
-        {renderStage("final")}
+        <section className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Pronosticuri Faze Eliminatorii</h2></section>
+        {renderStage("round32")}{renderStage("round16")}{renderStage("quarter")}{renderStage("semi")}{renderStage("third")}{renderStage("final")}
       </AppShell>
     </main>
   );
