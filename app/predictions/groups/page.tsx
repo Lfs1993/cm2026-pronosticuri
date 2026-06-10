@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageBanner } from "@/components/ui/page-banner";
 import { MatchCard } from "@/components/cards";
 import { supabase } from "@/lib/supabase";
 import { FIXTURES } from "@/lib/fixtures";
@@ -44,7 +45,7 @@ export default function GroupPredictionsByMatchdayPage() {
   function renderSection(matchday: 1 | 2 | 3) {
     return (
       <section className="mt-6">
-        <div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">Etapa {matchday}</h3></div>
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6"><h3 className="text-2xl font-bold">Etapa {matchday}</h3></div>
         <div className="mt-4 grid gap-4">
           {matchesByMatchday[matchday].map((match: any) => (
             <MatchCard key={match.id} match={match as any}>
@@ -63,10 +64,12 @@ export default function GroupPredictionsByMatchdayPage() {
   }
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.58), rgba(7,19,39,0.88)), url('/images/pronosticuri.jpeg')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main className="min-h-screen bg-[#071327]">
       <AppShell>
-        <section className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Pronosticuri Grupe</h2></section>
-        {renderSection(1)}{renderSection(2)}{renderSection(3)}
+        <PageBanner src="/images/pronosticuri.jpeg" alt="Pronosticuri Grupe" title="Pronosticuri Grupe" subtitle="Etapa 1, etapa 2 și etapa 3." />
+        {renderSection(1)}
+        {renderSection(2)}
+        {renderSection(3)}
       </AppShell>
     </main>
   );

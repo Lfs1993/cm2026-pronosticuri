@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageBanner } from "@/components/ui/page-banner";
 import { supabase } from "@/lib/supabase";
 import { FIXTURES } from "@/lib/fixtures";
 
@@ -10,6 +11,7 @@ const LABELS: Record<string, string> = { groups1: "Etapa 1", groups2: "Etapa 2",
 export default function AdminResultsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [scores, setScores] = useState<Record<string, { home: string; away: string }>>({});
+
   const grouped = useMemo(() => {
     const all = Array.from(FIXTURES) as any[];
     return {
@@ -44,15 +46,42 @@ export default function AdminResultsPage() {
 
   function renderBlock(key: keyof typeof grouped) {
     if (!grouped[key].length) return null;
-    return <section className="mt-6"><div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">{LABELS[key]}</h3></div><div className="mt-4 grid gap-4">{grouped[key].map((match: any) => <div key={match.id} className="card p-4"><div className="font-semibold">{match.home_team} vs {match.away_team}</div><div className="mt-1 text-sm text-white/60">{match.stage === "groups" ? `Grupa ${match.group_name}` : LABELS[match.stage]}</div><div className="mt-3 flex flex-wrap items-center gap-3"><input className="input max-w-[90px] text-center" type="number" min="0" value={scores[match.id]?.home ?? ""} onChange={(e) => setScores((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} /><span>-</span><input className="input max-w-[90px] text-center" type="number" min="0" value={scores[match.id]?.away ?? ""} onChange={(e) => setScores((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} /><button className="btn-primary" onClick={() => save(match.id)}>Salvează rezultat</button></div></div>)}</div></section>;
+    return (
+      <section className="mt-6">
+        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6"><h3 className="text-2xl font-bold">{LABELS[key]}</h3></div>
+        <div className="mt-4 grid gap-4">
+          {grouped[key].map((match: any) => (
+            <div key={match.id} className="rounded-3xl border border-white/10 bg-white/5 p-4">
+              <div className="font-semibold">{match.home_team} vs {match.away_team}</div>
+              <div className="mt-1 text-sm text-white/60">{match.stage === "groups" ? `Grupa ${match.group_name}` : LABELS[match.stage]}</div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <input className="input max-w-[90px] text-center" type="number" min="0" value={scores[match.id]?.home ?? ""} onChange={(e) => setScores((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} />
+                <span>-</span>
+                <input className="input max-w-[90px] text-center" type="number" min="0" value={scores[match.id]?.away ?? ""} onChange={(e) => setScores((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} />
+                <button className="btn-primary" onClick={() => save(match.id)}>Salvează rezultat</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    );
   }
 
-  if (!isAdmin) return <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.62), rgba(7,19,39,0.90)), url('/images/clasament.webp')", backgroundSize: "cover", backgroundPosition: "center" }}><AppShell><div className="card p-8 text-lg">Doar adminul poate modifica rezultatele.</div></AppShell></main>;
+  if (!isAdmin) {
+    return (
+      <main className="min-h-screen bg-[#071327]">
+        <AppShell>
+          <PageBanner src="/images/clasament.webp" alt="Admin" title="Admin" subtitle="Doar adminul poate modifica rezultatele." />
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-lg">Doar adminul poate modifica rezultatele.</div>
+        </AppShell>
+      </main>
+    );
+  }
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.62), rgba(7,19,39,0.90)), url('/images/clasament.webp')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main className="min-h-screen bg-[#071327]">
       <AppShell>
-        <section className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Admin</h2><p className="mt-2 text-white/70">Rezultatele sunt separate pe etape și pe faze eliminatorii.</p></section>
+        <PageBanner src="/images/clasament.webp" alt="Admin" title="Admin" subtitle="Meciurile sunt separate pe etape și pe faze eliminatorii." />
         {renderBlock("groups1")}{renderBlock("groups2")}{renderBlock("groups3")}{renderBlock("round32")}{renderBlock("round16")}{renderBlock("quarter")}{renderBlock("semi")}{renderBlock("third")}{renderBlock("final")}
       </AppShell>
     </main>

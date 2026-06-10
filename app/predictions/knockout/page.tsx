@@ -2,13 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
+import { PageBanner } from "@/components/ui/page-banner";
 import { MatchCard } from "@/components/cards";
 import { supabase } from "@/lib/supabase";
 import { FIXTURES } from "@/lib/fixtures";
 
-const LABELS: Record<string, string> = {
-  round32: "32-imi", round16: "Optimi", quarter: "Sferturi", semi: "Semifinale", third: "Finala mică", final: "Finala",
-};
+const LABELS: Record<string, string> = { round32: "32-imi", round16: "Optimi", quarter: "Sferturi", semi: "Semifinale", third: "Finala mică", final: "Finala" };
 
 export default function KnockoutPredictionsPage() {
   const [userId, setUserId] = useState<string | null>(null);
@@ -44,13 +43,13 @@ export default function KnockoutPredictionsPage() {
 
   function renderStage(stage: keyof typeof grouped) {
     if (!grouped[stage].length) return null;
-    return <section className="mt-6"><div className="card p-6 md:p-8"><h3 className="text-2xl font-bold">{LABELS[stage]}</h3></div><div className="mt-4 grid gap-4">{grouped[stage].map((match: any) => <MatchCard key={match.id} match={match as any}><div className="flex flex-wrap items-center gap-3"><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.home ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} /><span>-</span><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.away ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} /><button className="btn-primary" onClick={() => save(match)}>Salvează</button></div></MatchCard>)}</div></section>;
+    return <section className="mt-6"><div className="rounded-[28px] border border-white/10 bg-white/5 p-6"><h3 className="text-2xl font-bold">{LABELS[stage]}</h3></div><div className="mt-4 grid gap-4">{grouped[stage].map((match: any) => <MatchCard key={match.id} match={match as any}><div className="flex flex-wrap items-center gap-3"><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.home ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} /><span>-</span><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.away ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} /><button className="btn-primary" onClick={() => save(match)}>Salvează</button></div></MatchCard>)}</div></section>;
   }
 
   return (
-    <main style={{ backgroundImage: "linear-gradient(rgba(7,19,39,0.58), rgba(7,19,39,0.88)), url('/images/pronosticuri.jpeg')", backgroundSize: "cover", backgroundPosition: "center" }}>
+    <main className="min-h-screen bg-[#071327]">
       <AppShell>
-        <section className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Pronosticuri Faze Eliminatorii</h2></section>
+        <PageBanner src="/images/pronosticuri.jpeg" alt="Pronosticuri Faze Eliminatorii" title="Pronosticuri Faze Eliminatorii" subtitle="Toate rundele eliminatorii." />
         {renderStage("round32")}{renderStage("round16")}{renderStage("quarter")}{renderStage("semi")}{renderStage("third")}{renderStage("final")}
       </AppShell>
     </main>

@@ -17,7 +17,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   return (
-    <div className="min-h-screen bg-transparent">
+    <div className="min-h-screen bg-transparent text-white">
       <div className="mx-auto max-w-7xl px-4 py-6 md:px-8">
         <div className="mb-6 flex flex-col gap-4 rounded-3xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur lg:flex-row lg:items-center lg:justify-between">
           <div>
@@ -35,7 +35,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const Icon = link.icon;
             const active = pathname === link.href;
             return (
-              <Link key={link.href} href={link.href} className={active ? "btn bg-fifa-gold text-black" : "btn-secondary justify-start md:justify-center"}>
+              <Link
+                key={link.href}
+                href={link.href}
+                className={active ? "btn bg-fifa-gold text-black" : "btn-secondary justify-start md:justify-center"}
+              >
                 <Icon className="mr-2 h-4 w-4" /> {link.label}
               </Link>
             );
