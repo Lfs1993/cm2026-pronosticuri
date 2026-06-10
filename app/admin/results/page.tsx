@@ -22,7 +22,7 @@ export default function AdminResultsPage() {
   const [scores, setScores] = useState<Record<string, { home: string; away: string }>>({});
 
   const grouped = useMemo(() => {
-    const all = FIXTURES as any[];
+    const all = Array.from(FIXTURES) as any[];
     return {
       groups1: all.filter((m) => m.stage === "groups" && m.matchday === 1).sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
       groups2: all.filter((m) => m.stage === "groups" && m.matchday === 2).sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
