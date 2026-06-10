@@ -1,316 +1,322 @@
-"use client";
+// app/admin/results/page.tsx
+'use client'
 
-import { useEffect, useMemo, useState } from "react";
-import { AppShell } from "@/components/layout/app-shell";
-import { PageBanner } from "@/components/ui/page-banner";
-import { supabase } from "@/lib/supabase";
-import { FIXTURES } from "@/lib/fixtures";
+import { useEffect, useState, useCallback } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
+import ActivePhaseControl from '@/components/admin/ActivePhaseControl'
 
-const LABELS: Record<string, string> = {
-  groups1: "Etapa 1",
-  groups2: "Etapa 2",
-  groups3: "Etapa 3",
-  round16: "Optimi",
-  quarter: "Sferturi",
-  semi: "Semifinale",
-  third: "Finala mică",
-  final: "Finala",
-};
+type Match = {
+  id: string
+  stage: string
+  group_name: string | null
+  matchday: number | null
+  order_index: number
+  home_team: string
+  away_team: string
+  home_score: number | null
+  away_score: number | null
+  is_finished: boolean
+}
 
-type MatchScore = {
-  home: string;
-  away: string;
-};
+type Prediction = {
+  user_id: string
+  match_id: string
+  predicted_home: number
+  predicted_away: number
+  profiles: { display_name: string } | null
+}
 
-type PredictionRow = {
-  match_id: string;
-  user_id: string;
-  predicted_home: number;
-  predicted_away: number;
-};
+type Profile = {
+  id: string
+  is_admin: boolean
+}
 
-type ProfileRow = {
-  id: string;
-  display_name: string | null;
-};
+const STAGE_LABELS: Record<string, string> = {
+  groups:  'Grupe',
+  round16: 'Optimi',
+  quarter: 'Sferturi',
+  semi:    'Semifinale',
+  third:   'Finala mică',
+  final:   'Finala',
+}
 
-type PredictionView = {
-  userId: string;
-  displayName: string;
-  home: number;
-  away: number;
-};
+const STAGE_ORDER = ['groups', 'round16', 'quarter', 'semi', 'third', 'final']
 
 export default function AdminResultsPage() {
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [scores, setScores] = useState<Record<string, MatchScore>>({});
-  const [predictionsByMatch, setPredictionsByMatch] = useState<Record<string, PredictionView[]>>({});
-  const [loading, setLoading] = useState(true);
+  const router = useRouter()
 
-  const grouped = useMemo(() => {
-    const all = Array.from(FIXTURES) as any[];
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [matches, setMatches] = useState<Match[]>([])
+  const [predictions, setPredictions] = useState<Prediction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
 
-    return {
-      groups1: all
-        .filter((m) => m.stage === "groups" && m.matchday === 1)
-        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
-      groups2: all
-        .filter((m) => m.stage === "groups" && m.matchday === 2)
-        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
-      groups3: all
-        .filter((m) => m.stage === "groups" && m.matchday === 3)
-        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
-      round16: all.filter((m) => m.stage === "round16"),
-      quarter: all.filter((m) => m.stage === "quarter"),
-      semi: all.filter((m) => m.stage === "semi"),
-      third: all.filter((m) => m.stage === "third"),
-      final: all.filter((m) => m.stage === "final"),
-    };
-  }, []);
+  const [filterStage, setFilterStage] = useState<string>('groups')
+  const [filterGroup, setFilterGroup] = useState<string>('all')
+  const [filterMatchday, setFilterMatchday] = useState<string>('all')
+  const [filterStatus, setFilterStatus] = useState<'all' | 'finished' | 'pending'>('all')
+
+  const [scores, setScores] = useState<Record<string, { home: string; away: string }>>({})
 
   useEffect(() => {
-    async function load() {
-      const { data: authData } = await supabase.auth.getUser();
-      const user = authData.user;
+    async function checkAuth() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/'); return }
 
-      if (!user) {
-        window.location.href = "/auth/login";
-        return;
-      }
+      const { data: prof } = await supabase
+        .from('profiles')
+        .select('id, is_admin')
+        .eq('id', user.id)
+        .single()
 
-      const { data: me } = await supabase
-        .from("profiles")
-        .select("is_admin")
-        .eq("id", user.id)
-        .single();
+      if (!prof?.is_admin) { router.push('/'); return }
+      setProfile(prof)
+    }
+    checkAuth()
+  }, [])
 
-      if (!me?.is_admin) {
-        setLoading(false);
-        return;
-      }
+  const fetchData = useCallback(async () => {
+    setLoading(true)
+    const [matchRes, predRes] = await Promise.all([
+      supabase.from('matches').select('*').order('order_index'),
+      supabase.from('predictions').select('user_id, match_id, predicted_home, predicted_away, profiles(display_name)'),
+    ])
 
-      setIsAdmin(true);
-
-      const [{ data: matchesData }, { data: predictionsData }, { data: profilesData }] =
-        await Promise.all([
-          supabase.from("matches").select("id, home_score, away_score"),
-          supabase
-            .from("predictions")
-            .select("match_id, user_id, predicted_home, predicted_away"),
-          supabase.from("profiles").select("id, display_name"),
-        ]);
-
-      const scoreMap: Record<string, MatchScore> = {};
-      (matchesData || []).forEach((m: any) => {
-        scoreMap[m.id] = {
-          home: m.home_score?.toString() ?? "",
-          away: m.away_score?.toString() ?? "",
-        };
-      });
-      setScores(scoreMap);
-
-      const profilesMap = new Map<string, string>();
-      ((profilesData as ProfileRow[] | null) || []).forEach((p) => {
-        profilesMap.set(p.id, p.display_name || "User");
-      });
-
-      const predictionMap: Record<string, PredictionView[]> = {};
-      ((predictionsData as PredictionRow[] | null) || []).forEach((p) => {
-        predictionMap[p.match_id] ??= [];
-        predictionMap[p.match_id].push({
-          userId: p.user_id,
-          displayName: profilesMap.get(p.user_id) || "User",
-          home: p.predicted_home,
-          away: p.predicted_away,
-        });
-      });
-
-      Object.keys(predictionMap).forEach((matchId) => {
-        predictionMap[matchId].sort((a, b) =>
-          a.displayName.localeCompare(b.displayName)
-        );
-      });
-
-      setPredictionsByMatch(predictionMap);
-      setLoading(false);
+    if (matchRes.data) {
+      setMatches(matchRes.data)
+      const initial: Record<string, { home: string; away: string }> = {}
+      matchRes.data.forEach((m: Match) => {
+        initial[m.id] = {
+          home: m.home_score?.toString() ?? '',
+          away: m.away_score?.toString() ?? '',
+        }
+      })
+      setScores(initial)
     }
 
-    load();
-  }, []);
+    if (predRes.data) setPredictions(predRes.data as Prediction[])
+    setLoading(false)
+  }, [])
 
-  async function save(matchId: string) {
-    const value = scores[matchId];
-    if (!value) return;
+  useEffect(() => { if (profile) fetchData() }, [profile, fetchData])
 
-    await supabase
-      .from("matches")
-      .update({
-        home_score: value.home === "" ? null : Number(value.home),
-        away_score: value.away === "" ? null : Number(value.away),
-        is_finished: value.home !== "" && value.away !== "",
-      })
-      .eq("id", matchId);
+  async function saveResult(matchId: string) {
+    const s = scores[matchId]
+    if (!s) return
+    const home = parseInt(s.home)
+    const away = parseInt(s.away)
+    if (isNaN(home) || isNaN(away)) { alert('Introduceți scoruri valide!'); return }
 
-    alert("Rezultatul a fost salvat.");
+    setSaving(matchId)
+    const { error } = await supabase
+      .from('matches')
+      .update({ home_score: home, away_score: away, is_finished: true })
+      .eq('id', matchId)
+
+    if (error) alert(`Eroare la salvare: ${error.message}`)
+    else await fetchData()
+    setSaving(null)
   }
 
-  function renderPredictions(matchId: string) {
-    const items = predictionsByMatch[matchId] || [];
+  const availableGroups = [...new Set(
+    matches.filter(m => m.stage === 'groups' && m.group_name).map(m => m.group_name!)
+  )].sort()
 
+  const filteredMatches = matches.filter(m => {
+    if (m.stage !== filterStage) return false
+    if (filterStage === 'groups') {
+      if (filterGroup !== 'all' && m.group_name !== filterGroup) return false
+      if (filterMatchday !== 'all' && m.matchday?.toString() !== filterMatchday) return false
+    }
+    if (filterStatus === 'finished' && !m.is_finished) return false
+    if (filterStatus === 'pending' && m.is_finished) return false
+    return true
+  })
+
+  function getPredictionsForMatch(matchId: string) {
+    return predictions.filter(p => p.match_id === matchId)
+  }
+
+  function getPredictionResult(pred: Prediction, match: Match): string {
+    if (!match.is_finished) return '⏳'
+    const h = match.home_score!; const a = match.away_score!
+    if (pred.predicted_home === h && pred.predicted_away === a) return '✅'
+    const mw = h > a ? 'home' : a > h ? 'away' : 'draw'
+    const pw = pred.predicted_home > pred.predicted_away ? 'home'
+      : pred.predicted_home < pred.predicted_away ? 'away' : 'draw'
+    if (mw === pw) return '🟡'
+    return '❌'
+  }
+
+  if (loading && !profile) {
     return (
-      <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4">
-        <div className="mb-2 text-sm font-semibold text-white/75">
-          Pronosticurile tuturor
-        </div>
-
-        {items.length === 0 ? (
-          <div className="text-sm text-white/55">
-            Nu există pronosticuri încă.
-          </div>
-        ) : (
-          <div className="grid gap-2">
-            {items.map((item) => (
-              <div
-                key={`${matchId}-${item.userId}`}
-                className="flex items-center justify-between rounded-xl bg-white/5 px-3 py-2 text-sm"
-              >
-                <span>{item.displayName}</span>
-                <span className="font-semibold text-fifa-gold">
-                  {item.home} - {item.away}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
+      <div className="flex min-h-screen items-center justify-center bg-gray-950">
+        <p className="text-white/50">Se verifică accesul...</p>
       </div>
-    );
-  }
-
-  function renderBlock(key: keyof typeof grouped) {
-    if (!grouped[key].length) return null;
-
-    return (
-      <section className="mt-6">
-        <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">
-          <h3 className="text-2xl font-bold">{LABELS[key]}</h3>
-        </div>
-
-        <div className="mt-4 grid gap-4">
-          {grouped[key].map((match: any) => (
-            <div
-              key={match.id}
-              className="rounded-3xl border border-white/10 bg-white/5 p-4"
-            >
-              <div className="font-semibold">
-                {match.home_team} vs {match.away_team}
-              </div>
-
-              <div className="mt-1 text-sm text-white/60">
-                {match.stage === "groups"
-                  ? `Grupa ${match.group_name}`
-                  : LABELS[match.stage]}
-              </div>
-
-              <div className="mt-3 flex flex-wrap items-center gap-3">
-                <input
-                  className="input max-w-[90px] text-center"
-                  type="number"
-                  min="0"
-                  value={scores[match.id]?.home ?? ""}
-                  onChange={(e) =>
-                    setScores((prev) => ({
-                      ...prev,
-                      [match.id]: {
-                        home: e.target.value,
-                        away: prev[match.id]?.away ?? "",
-                      },
-                    }))
-                  }
-                />
-
-                <span>-</span>
-
-                <input
-                  className="input max-w-[90px] text-center"
-                  type="number"
-                  min="0"
-                  value={scores[match.id]?.away ?? ""}
-                  onChange={(e) =>
-                    setScores((prev) => ({
-                      ...prev,
-                      [match.id]: {
-                        home: prev[match.id]?.home ?? "",
-                        away: e.target.value,
-                      },
-                    }))
-                  }
-                />
-
-                <button className="btn-primary" onClick={() => save(match.id)}>
-                  Salvează rezultat
-                </button>
-              </div>
-
-              {renderPredictions(match.id)}
-            </div>
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[#071327]">
-        <AppShell>
-          <PageBanner
-            src="/images/clasament.webp"
-            alt="Admin"
-            title="Admin"
-            subtitle="Se încarcă..."
-          />
-        </AppShell>
-      </main>
-    );
-  }
-
-  if (!isAdmin) {
-    return (
-      <main className="min-h-screen bg-[#071327]">
-        <AppShell>
-          <PageBanner
-            src="/images/clasament.webp"
-            alt="Admin"
-            title="Admin"
-            subtitle="Doar adminul poate modifica rezultatele."
-          />
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-8 text-lg">
-            Doar adminul poate modifica rezultatele.
-          </div>
-        </AppShell>
-      </main>
-    );
+    )
   }
 
   return (
-    <main className="min-h-screen bg-[#071327]">
-      <AppShell>
-        <PageBanner
-          src="/images/clasament.webp"
-          alt="Admin"
-          title="Admin"
-          subtitle="Vezi toate pronosticurile și introdu rezultatele reale."
-        />
+    <div className="min-h-screen bg-gray-950 text-white">
 
-        {renderBlock("groups1")}
-        {renderBlock("groups2")}
-        {renderBlock("groups3")}
-        {renderBlock("round16")}
-        {renderBlock("quarter")}
-        {renderBlock("semi")}
-        {renderBlock("third")}
-        {renderBlock("final")}
-      </AppShell>
-    </main>
-  );
+      {/* Banner */}
+      <div className="relative h-40 overflow-hidden">
+        <img src="/images/clasament.webp" alt="Admin" className="h-full w-full object-cover object-center" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-gray-950" />
+        <div className="absolute inset-0 flex items-center justify-center">
+          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">Admin – CM 2026</h1>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-5xl px-4 py-8 space-y-8">
+
+        {/* Control etapă activă */}
+        <ActivePhaseControl />
+
+        {/* Filtre */}
+        <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+          <p className="text-sm font-medium text-white/70">Filtrează meciuri</p>
+
+          {/* Rundă / Etapă */}
+          <div className="flex flex-wrap gap-2">
+            {STAGE_ORDER.map(stage => (
+              <button
+                key={stage}
+                onClick={() => { setFilterStage(stage); setFilterGroup('all'); setFilterMatchday('all') }}
+                className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${
+                  filterStage === stage ? 'bg-amber-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'
+                }`}
+              >
+                {STAGE_LABELS[stage]}
+              </button>
+            ))}
+          </div>
+
+          {/* Grupă + Etapă (doar la grupe) */}
+          {filterStage === 'groups' && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={() => setFilterGroup('all')}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                  filterGroup === 'all' ? 'bg-amber-500/80 text-black' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                }`}>
+                Toate grupele
+              </button>
+              {availableGroups.map(g => (
+                <button key={g} onClick={() => setFilterGroup(g)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    filterGroup === g ? 'bg-amber-500/80 text-black' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}>
+                  Grupa {g}
+                </button>
+              ))}
+              <span className="self-stretch w-px bg-white/10 mx-1" />
+              {['all', '1', '2', '3'].map(md => (
+                <button key={md} onClick={() => setFilterMatchday(md)}
+                  className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                    filterMatchday === md ? 'bg-blue-500/80 text-white' : 'bg-white/10 text-white/60 hover:bg-white/20'
+                  }`}>
+                  {md === 'all' ? 'Toate etapele' : `Etapa ${md}`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Status */}
+          <div className="flex gap-2">
+            {(['all', 'finished', 'pending'] as const).map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
+                  filterStatus === s ? 'bg-white/30 text-white' : 'bg-white/10 text-white/50 hover:bg-white/20'
+                }`}>
+                {s === 'all' ? 'Toate' : s === 'finished' ? '✅ Finalizate' : '⏳ Fără rezultat'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Lista meciuri */}
+        {loading ? (
+          <div className="text-center py-12 text-white/50">Se încarcă meciurile...</div>
+        ) : filteredMatches.length === 0 ? (
+          <div className="text-center py-12 text-white/50">Niciun meci găsit cu filtrele selectate.</div>
+        ) : (
+          <div className="space-y-6">
+            {filteredMatches.map(match => {
+              const matchPreds = getPredictionsForMatch(match.id)
+              const sc = scores[match.id] ?? { home: '', away: '' }
+
+              return (
+                <div key={match.id} className="rounded-xl border border-white/10 bg-white/5 overflow-hidden">
+
+                  {/* Header meci */}
+                  <div className="flex items-center justify-between px-4 py-2 bg-white/5 border-b border-white/10">
+                    <span className="text-xs text-white/40">
+                      {match.group_name ? `Grupa ${match.group_name}` : STAGE_LABELS[match.stage] ?? match.stage}
+                      {match.matchday ? ` · Etapa ${match.matchday}` : ''}
+                      {match.is_finished && (
+                        <span className="ml-2 rounded-full bg-green-500/20 border border-green-500/30 px-2 py-0.5 text-green-400">
+                          Finalizat
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-xs text-white/30">{matchPreds.length} pronosticuri</span>
+                  </div>
+
+                  {/* Echipe + input scoruri */}
+                  <div className="flex items-center gap-3 px-4 py-4">
+                    <span className="flex-1 text-right font-semibold text-white">{match.home_team}</span>
+
+                    <div className="flex items-center gap-2">
+                      <input type="number" min={0} max={99} value={sc.home}
+                        onChange={e => setScores(prev => ({ ...prev, [match.id]: { ...prev[match.id], home: e.target.value } }))}
+                        className="w-12 rounded-lg border border-white/20 bg-gray-900 px-2 py-1.5 text-center text-lg font-bold text-white focus:border-amber-500 focus:outline-none"
+                        placeholder="–" />
+                      <span className="text-white/40 font-bold">:</span>
+                      <input type="number" min={0} max={99} value={sc.away}
+                        onChange={e => setScores(prev => ({ ...prev, [match.id]: { ...prev[match.id], away: e.target.value } }))}
+                        className="w-12 rounded-lg border border-white/20 bg-gray-900 px-2 py-1.5 text-center text-lg font-bold text-white focus:border-amber-500 focus:outline-none"
+                        placeholder="–" />
+                    </div>
+
+                    <span className="flex-1 font-semibold text-white">{match.away_team}</span>
+
+                    <button onClick={() => saveResult(match.id)} disabled={saving === match.id}
+                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 transition-colors">
+                      {saving === match.id ? '...' : 'Salvează'}
+                    </button>
+                  </div>
+
+                  {/* Pronosticuri useri */}
+                  {matchPreds.length > 0 && (
+                    <div className="border-t border-white/10 px-4 py-3">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/40">
+                        Pronosticurile jucătorilor
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                        {matchPreds.map(pred => (
+                          <div key={pred.user_id}
+                            className="flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-3 py-2">
+                            <span className="text-xs text-white/70 truncate max-w-[80px]">
+                              {pred.profiles?.display_name ?? 'User'}
+                            </span>
+                            <span className="text-sm font-bold text-white ml-2 shrink-0">
+                              {pred.predicted_home} – {pred.predicted_away}
+                            </span>
+                            <span className="ml-1 text-xs shrink-0">
+                              {getPredictionResult(pred, match)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }
