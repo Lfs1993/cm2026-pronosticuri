@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabase";
 import { FIXTURES } from "@/lib/fixtures";
 
 const FLAGS: Record<string, string> = {
- const FLAGS: Record<string, string> = {
   "Mexico": "🇲🇽",
   "South Africa": "🇿🇦",
   "South Korea": "🇰🇷",
@@ -19,7 +18,7 @@ const FLAGS: Record<string, string> = {
   "Brazil": "🇧🇷",
   "Morocco": "🇲🇦",
   "Haiti": "🇭🇹",
-  "Scotland": "SCO",
+  "Scotland": "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC73\uDB40\uDC63\uDB40\uDC74\uDB40\uDC7F",
   "USA": "🇺🇸",
   "Paraguay": "🇵🇾",
   "Australia": "🇦🇺",
@@ -52,7 +51,7 @@ const FLAGS: Record<string, string> = {
   "DR Congo": "🇨🇩",
   "Uzbekistan": "🇺🇿",
   "Colombia": "🇨🇴",
-  "England": "EN",
+  "England": "\uD83C\uDFF4\uDB40\uDC67\uDB40\uDC62\uDB40\uDC65\uDB40\uDC6E\uDB40\uDC67\uDB40\uDC7F",
   "Croatia": "🇭🇷",
   "Ghana": "🇬🇭",
   "Panama": "🇵🇦",
