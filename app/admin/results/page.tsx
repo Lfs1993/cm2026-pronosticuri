@@ -44,9 +44,7 @@ type PredictionView = {
 export default function AdminResultsPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [scores, setScores] = useState<Record<string, MatchScore>>({});
-  const [predictionsByMatch, setPredictionsByMatch] = useState<
-    Record<string, PredictionView[]>
-  >({});
+  const [predictionsByMatch, setPredictionsByMatch] = useState<Record<string, PredictionView[]>>({});
   const [loading, setLoading] = useState(true);
 
   const grouped = useMemo(() => {
@@ -55,19 +53,13 @@ export default function AdminResultsPage() {
     return {
       groups1: all
         .filter((m) => m.stage === "groups" && m.matchday === 1)
-        .sort((a, b) =>
-          (a.group_name || "").localeCompare(b.group_name || "")
-        ),
+        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
       groups2: all
         .filter((m) => m.stage === "groups" && m.matchday === 2)
-        .sort((a, b) =>
-          (a.group_name || "").localeCompare(b.group_name || "")
-        ),
+        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
       groups3: all
         .filter((m) => m.stage === "groups" && m.matchday === 3)
-        .sort((a, b) =>
-          (a.group_name || "").localeCompare(b.group_name || "")
-        ),
+        .sort((a, b) => (a.group_name || "").localeCompare(b.group_name || "")),
       round16: all.filter((m) => m.stage === "round16"),
       quarter: all.filter((m) => m.stage === "quarter"),
       semi: all.filter((m) => m.stage === "semi"),
@@ -254,10 +246,7 @@ export default function AdminResultsPage() {
                   }
                 />
 
-                <button
-                  className="btn-primary"
-                  onClick={() => save(match.id)}
-                >
+                <button className="btn-primary" onClick={() => save(match.id)}>
                   Salvează rezultat
                 </button>
               </div>
@@ -301,3 +290,27 @@ export default function AdminResultsPage() {
         </AppShell>
       </main>
     );
+  }
+
+  return (
+    <main className="min-h-screen bg-[#071327]">
+      <AppShell>
+        <PageBanner
+          src="/images/clasament.webp"
+          alt="Admin"
+          title="Admin"
+          subtitle="Vezi toate pronosticurile și introdu rezultatele reale."
+        />
+
+        {renderBlock("groups1")}
+        {renderBlock("groups2")}
+        {renderBlock("groups3")}
+        {renderBlock("round16")}
+        {renderBlock("quarter")}
+        {renderBlock("semi")}
+        {renderBlock("third")}
+        {renderBlock("final")}
+      </AppShell>
+    </main>
+  );
+}
