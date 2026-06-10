@@ -1,0 +1,14 @@
+"use client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+export function LoginForm() {
+  const router = useRouter(); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+  async function handleSubmit(e: React.FormEvent) { e.preventDefault(); setLoading(true); setError(null); const { error } = await supabase.auth.signInWithPassword({ email, password }); setLoading(false); if (error) return setError(error.message); router.push("/dashboard"); router.refresh(); }
+  return <form onSubmit={handleSubmit} className="space-y-4"><input className="input" placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /><input className="input" placeholder="Parolă" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />{error ? <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}<button type="submit" className="btn-primary w-full">{loading ? "Se conectează..." : "Intră în cont"}</button></form>;
+}
+export function SignUpForm() {
+  const router = useRouter(); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [displayName, setDisplayName] = useState(""); const [error, setError] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null); const [loading, setLoading] = useState(false);
+  async function handleSubmit(e: React.FormEvent) { e.preventDefault(); setLoading(true); setError(null); setMessage(null); const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { display_name: displayName } } }); setLoading(false); if (error) return setError(error.message); setMessage("Cont creat. Dacă Supabase îți cere confirmare pe email, confirmă și apoi intră în cont."); if (data.user) { router.push("/auth/login"); router.refresh(); } }
+  return <form onSubmit={handleSubmit} className="space-y-4"><input className="input" placeholder="Numele tău" value={displayName} onChange={(e) => setDisplayName(e.target.value)} /><input className="input" placeholder="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /><input className="input" placeholder="Parolă" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />{error ? <div className="rounded-2xl border border-red-400/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}{message ? <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-3 text-sm text-emerald-100">{message}</div> : null}<button type="submit" className="btn-primary w-full">{loading ? "Se creează..." : "Creează cont"}</button></form>;
+}

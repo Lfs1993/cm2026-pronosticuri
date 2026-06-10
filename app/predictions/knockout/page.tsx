@@ -1,0 +1,14 @@
+"use client";
+import { useEffect, useMemo, useState } from "react";
+import { AppShell } from "@/components/layout/app-shell";
+import { MatchCard } from "@/components/cards";
+import { supabase } from "@/lib/supabase";
+import { FIXTURES } from "@/lib/fixtures";
+export default function Page() {
+  const [userId, setUserId] = useState<string | null>(null);
+  const [values, setValues] = useState<Record<string, { home: string; away: string }>>({});
+  const matches = useMemo(() => FIXTURES.filter((m: any) => m.stage !== "groups"), []);
+  useEffect(() => { async function load() { const { data: authData } = await supabase.auth.getUser(); const user = authData.user; if (!user) return (window.location.href = "/auth/login"); setUserId(user.id); const { data } = await supabase.from("predictions").select("match_id, predicted_home, predicted_away").eq("user_id", user.id); const map: Record<string, { home: string; away: string }> = {}; (data || []).forEach((p: any) => { map[p.match_id] = { home: String(p.predicted_home), away: String(p.predicted_away) }; }); setValues(map); } load(); }, []);
+  async function save(match: any) { if (!userId) return; const current = values[match.id]; if (!current || current.home === "" || current.away === "") return; await supabase.from("predictions").upsert({ user_id: userId, match_id: match.id, predicted_home: Number(current.home), predicted_away: Number(current.away) }, { onConflict: "user_id,match_id" }); alert("Pronosticul a fost salvat."); }
+  return <AppShell><section className="card p-6 md:p-8"><h2 className="text-3xl font-bold">Pronosticuri – fazele eliminatorii</h2><p className="mt-2 text-white/70">Aici completezi 32-imi, optimi, sferturi, semifinale, finala mică și finala.</p></section><div className="mt-6 grid gap-4">{matches.map((match: any) => <MatchCard key={match.id} match={match as any}><div className="flex flex-wrap items-center gap-3"><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.home ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: e.target.value, away: prev[match.id]?.away ?? "" } }))} /><span>-</span><input className="input max-w-[90px] text-center" type="number" min="0" value={values[match.id]?.away ?? ""} onChange={(e) => setValues((prev) => ({ ...prev, [match.id]: { home: prev[match.id]?.home ?? "", away: e.target.value } }))} /><button className="btn-primary" onClick={() => save(match)} disabled={new Date(match.lock_at) <= new Date()}>Salvează</button>{new Date(match.lock_at) <= new Date() ? <span className="text-sm text-red-200">Deadline trecut</span> : null}</div></MatchCard>)}</div></AppShell>;
+}

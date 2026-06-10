@@ -1,0 +1,2 @@
+export function getResultType(home: number, away: number) { if (home > away) return "H"; if (away > home) return "A"; return "D"; }
+export function formatKickoff(iso: string) { return new Intl.DateTimeFormat("ro-RO", { dateStyle: "medium", timeStyle: "short" }).format(new Date(iso)); }

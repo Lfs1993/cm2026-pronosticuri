@@ -1,0 +1,3 @@
+import Link from "next/link";
+import { LoginForm } from "@/components/auth/auth-forms";
+export default function LoginPage() { return <main className="min-h-screen bg-stadium px-4 py-10 text-white md:px-8"><div className="mx-auto max-w-md card p-8"><h1 className="text-3xl font-bold">Intră în cont</h1><p className="mt-2 text-white/70">Folosește emailul și parola. Fiecare își vede doar propriile pronosticuri.</p><div className="mt-6"><LoginForm /></div><p className="mt-6 text-sm text-white/60">N-ai cont? <Link href="/auth/sign-up" className="text-fifa-gold">Creează unul aici</Link></p></div></main>; }
