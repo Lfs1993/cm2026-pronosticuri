@@ -10,7 +10,6 @@ const LABELS: Record<string, string> = {
   groups1: "Etapa 1",
   groups2: "Etapa 2",
   groups3: "Etapa 3",
-  round32: "32-imi",
   round16: "Optimi",
   quarter: "Sferturi",
   semi: "Semifinale",
@@ -69,7 +68,6 @@ export default function AdminResultsPage() {
         .sort((a, b) =>
           (a.group_name || "").localeCompare(b.group_name || "")
         ),
-      round32: all.filter((m) => m.stage === "round32"),
       round16: all.filter((m) => m.stage === "round16"),
       quarter: all.filter((m) => m.stage === "quarter"),
       semi: all.filter((m) => m.stage === "semi"),
@@ -150,6 +148,7 @@ export default function AdminResultsPage() {
 
   async function save(matchId: string) {
     const value = scores[matchId];
+    if (!value) return;
 
     await supabase
       .from("matches")
@@ -302,29 +301,3 @@ export default function AdminResultsPage() {
         </AppShell>
       </main>
     );
-  }
-
-  return (
-    <main className="min-h-screen bg-[#071327]">
-      <AppShell>
-        <PageBanner
-          src="/images/clasament.webp"
-          alt="Admin"
-          title="Admin"
-          subtitle="Vezi toate pronosticurile și introdu rezultatele reale."
-        />
-
-        {renderBlock("groups1")}
-        {renderBlock("groups2")}
-        {renderBlock("groups3")}
-        {renderBlock("round32")}
-        {renderBlock("round16")}
-        {renderBlock("quarter")}
-        {renderBlock("semi")}
-        {renderBlock("third")}
-        {renderBlock("final")}
-      </AppShell>
-    </main>
-  );
-}
-``
