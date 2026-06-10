@@ -7,14 +7,21 @@ import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
   const [loggedIn, setLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       const { data } = await supabase.auth.getUser();
       setLoggedIn(Boolean(data.user));
+      setLoading(false);
     }
     load();
   }, []);
+
+  async function logout() {
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }
 
   return (
     <main className="min-h-screen px-4 py-10 text-white md:px-8" style={{
@@ -29,20 +36,23 @@ export default function HomePage() {
               <div className="mb-3 text-sm uppercase tracking-[0.4em] text-fifa-gold">World Cup 2026</div>
               <h1 className="text-4xl font-black leading-tight md:text-6xl">LIGA de pronosticuri a blyats-ilor CM 2026</h1>
               <p className="mt-6 max-w-2xl text-lg text-white/75">Grupe, pronosticuri, clasament și admin rezultate.</p>
+
               <div className="mt-8 flex flex-wrap gap-3">
-                {loggedIn ? (
+                {loading ? null : loggedIn ? (
                   <>
                     <Link href="/groups" className="btn-primary">Intră în site</Link>
-                    <Link href="/leaderboard" className="btn-secondary">Vezi clasamentul</Link>
+                    <button onClick={logout} className="btn-secondary">Logout</button>
                   </>
                 ) : (
                   <>
-                    <Link href="/auth/sign-up" className="btn-primary">Creează cont</Link>
-                    <Link href="/auth/login" className="btn-secondary">Am deja cont</Link>
+                    <Link href="/auth/login" className="btn-primary">Login</Link>
+                    <Link href="/auth/sign-up" className="btn-secondary">Creează cont</Link>
+                    <Link href="/auth/forgot-password" className="btn-secondary">Recuperare parolă</Link>
                   </>
                 )}
               </div>
             </div>
+
             <div className="overflow-hidden rounded-3xl border border-white/10 bg-black/20 p-3">
               <div className="relative aspect-[16/10] overflow-hidden rounded-2xl">
                 <Image src="/images/cupa-mondiala.jpg" alt="Cupa Mondială" fill className="object-cover" priority />
