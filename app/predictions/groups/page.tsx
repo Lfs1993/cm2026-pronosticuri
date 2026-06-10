@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
@@ -38,9 +39,15 @@ export default function PredictionsGroupsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [toast, setToast] = useState<string | null>(null);
 
   const [filterMatchday, setFilterMatchday] = useState<string>("1");
   const [filterGroup, setFilterGroup] = useState<string>("all");
+
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  }
 
   useEffect(() => {
     async function init() {
@@ -94,7 +101,7 @@ export default function PredictionsGroupsPage() {
     init();
   }, [router]);
 
-  // sincronizează filtrul cu faza activă
+  // sincronizează filtrul cu etapa activă
   useEffect(() => {
     if (!activePhase) return;
 
@@ -106,7 +113,11 @@ export default function PredictionsGroupsPage() {
   function isMatchdayLocked(matchday: number): boolean {
     if (!activePhase) return true;
 
-    if (["round16", "quarter", "semi", "third", "final", "closed"].includes(activePhase)) {
+    if (
+      ["round16", "quarter", "semi", "third", "final", "closed"].includes(
+        activePhase
+      )
+    ) {
       return true;
     }
 
@@ -123,7 +134,7 @@ export default function PredictionsGroupsPage() {
     const away = parseInt(pred.away, 10);
 
     if (isNaN(home) || isNaN(away) || home < 0 || away < 0) {
-      alert("Introduceți scoruri valide (0 sau mai mare)!");
+      showToast("Introduceți scoruri valide (0 sau mai mare)!");
       return;
     }
 
@@ -140,12 +151,40 @@ export default function PredictionsGroupsPage() {
     );
 
     if (error) {
-      alert(`Eroare: ${error.message}`);
+      showToast(`Eroare: ${error.message}`);
     } else {
       setSaved((prev) => ({ ...prev, [matchId]: true }));
+      showToast("Prediction saved");
     }
 
     setSaving(null);
+  }
+
+  async function deletePrediction(matchId: string) {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("predictions")
+      .delete()
+      .eq("user_id", userId)
+      .eq("match_id", matchId);
+
+    if (error) {
+      showToast(`Eroare la ștergere: ${error.message}`);
+      return;
+    }
+
+    setPredictions((prev) => ({
+      ...prev,
+      [matchId]: { home: "", away: "" },
+    }));
+
+    setSaved((prev) => ({
+      ...prev,
+      [matchId]: false,
+    }));
+
+    showToast("Pronosticul a fost șters");
   }
 
   const availableGroups = useMemo(() => {
@@ -154,8 +193,7 @@ export default function PredictionsGroupsPage() {
         matches
           .filter(
             (m) =>
-              m.matchday?.toString() === filterMatchday &&
-              m.group_name
+              m.matchday?.toString() === filterMatchday && m.group_name
           )
           .map((m) => m.group_name as string)
       ),
@@ -174,12 +212,20 @@ export default function PredictionsGroupsPage() {
 
   return (
     <div className="min-h-screen bg-[#071327] text-white">
+      {toast && (
+        <div className="fixed right-4 top-4 z-50 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 backdrop-blur">
+          {toast}
+        </div>
+      )}
+
       {/* Banner */}
       <div className="relative h-40 overflow-hidden">
-        <img
+        <Image
           src="/images/pronosticuri.jpeg"
           alt="Pronosticuri Grupe"
-          className="h-full w-full object-cover object-center"
+          fill
+          className="object-cover object-center"
+          priority
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-[#071327]" />
 
@@ -190,7 +236,7 @@ export default function PredictionsGroupsPage() {
 
           <Link
             href="/"
-            className="absolute left-4 bottom-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
+            className="absolute bottom-4 left-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
           >
             ← Înapoi
           </Link>
@@ -347,17 +393,30 @@ export default function PredictionsGroupsPage() {
                     </span>
 
                     {!locked && (
-                      <button
-                        onClick={() => savePrediction(match.id)}
-                        disabled={saving === match.id}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-                          wasSaved
-                            ? "bg-green-600 text-white"
-                            : "bg-amber-500 text-black hover:bg-amber-400"
-                        } disabled:opacity-50`}
-                      >
-                        {saving === match.id ? "..." : wasSaved ? "✓ Salvat" : "Salvează"}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => savePrediction(match.id)}
+                          disabled={saving === match.id}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            wasSaved
+                              ? "bg-green-600 text-white"
+                              : "bg-amber-500 text-black hover:bg-amber-400"
+                          } disabled:opacity-50`}
+                        >
+                          {saving === match.id
+                            ? "..."
+                            : wasSaved
+                            ? "✓ Salvat"
+                            : "Salvează"}
+                        </button>
+
+                        <button
+                          onClick={() => deletePrediction(match.id)}
+                          className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                        >
+                          Șterge
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
