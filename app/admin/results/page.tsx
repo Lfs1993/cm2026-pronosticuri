@@ -24,7 +24,7 @@ type Prediction = {
   match_id: string
   predicted_home: number
   predicted_away: number
-  profiles: { display_name: string } | null
+  profiles: { display_name: string }[] | null
 }
 
 type Profile = {
