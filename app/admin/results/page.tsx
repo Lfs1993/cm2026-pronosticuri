@@ -197,6 +197,42 @@ export default function AdminResultsPage() {
 
   const matchesForUsersTab = matches.filter(m => m.stage === filterStageUsers);
 
+  const groupedMatchesForUsersTab = (() => {
+    if (filterStageUsers === "groups") {
+      const grouped: Record<string, Match[]> = {};
+
+      matchesForUsersTab.forEach(match => {
+        const group = match.group_name ?? "-";
+        const matchday = match.matchday ?? 0;
+        const key = `${group}-${matchday}`;
+
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(match);
+      });
+
+      return Object.entries(grouped).sort(([a], [b]) => {
+        const [groupA, mdA] = a.split("-");
+        const [groupB, mdB] = b.split("-");
+
+        if (groupA !== groupB) return groupA.localeCompare(groupB);
+        return Number(mdA) - Number(mdB);
+      });
+    }
+
+    const grouped: Record<string, Match[]> = {};
+    matchesForUsersTab.forEach(match => {
+      const key = match.matchday ? `matchday-${match.matchday}` : "all";
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(match);
+    });
+
+    return Object.entries(grouped).sort(([a], [b]) => {
+      if (a === "all") return -1;
+      if (b === "all") return 1;
+      return Number(a.replace("matchday-", "")) - Number(b.replace("matchday-", ""));
+    });
+  })();
+
   if (loading && !profile) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-950">
@@ -352,27 +388,6 @@ export default function AdminResultsPage() {
                           )}
                         </div>
                       </div>
-                      {matchPreds.length > 0 && (
-                        <div className="border-t border-white/10 px-4 py-3">
-                          <p className="mb-2 text-xs font-medium uppercase tracking-wider text-white/40">Pronosticurile jucătorilor</p>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                            {matchPreds.map(pred => (
-                              <div key={pred.user_id}
-                                className="flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-3 py-2">
-                                <span className="text-xs text-white/70 truncate max-w-[80px]">
-                                  {pred.profiles?.[0]?.display_name ?? "User"}
-                                </span>
-                                <span className="text-sm font-bold text-white ml-2 shrink-0">
-                                  {pred.predicted_home} – {pred.predicted_away}
-                                </span>
-                                <span className="ml-1 text-xs shrink-0">
-                                  {getPredictionResult(pred, match)}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -429,37 +444,62 @@ export default function AdminResultsPage() {
                         {matchesForUsersTab.length === 0 ? (
                           <p className="px-4 py-3 text-xs text-white/40">Nu există meciuri pentru această etapă.</p>
                         ) : (
-                          matchesForUsersTab.map(match => {
-                            const pred = user.predictions.find(p => p.match_id === match.id);
-                            const result = pred ? calcPoints(pred, match) : null;
+                          groupedMatchesForUsersTab.map(([sectionKey, sectionMatches]) => {
+                            let sectionLabel = "";
+
+                            if (filterStageUsers === "groups") {
+                              const [group, matchday] = sectionKey.split("-");
+                              sectionLabel = `Grupa ${group} · Etapa ${matchday}`;
+                            } else if (sectionKey.startsWith("matchday-")) {
+                              sectionLabel = `Etapa ${sectionKey.replace("matchday-", "")}`;
+                            } else {
+                              sectionLabel = "Meciuri";
+                            }
 
                             return (
-                              <div key={match.id} className="flex items-center gap-2 px-4 py-2.5">
-                                {/* Meci */}
-                                <div className="flex-1 min-w-0">
-                                  <span className="text-xs text-white/50 truncate block">
-                                    {match.home_team} vs {match.away_team}
-                                  </span>
-                                  {match.is_finished && match.home_score !== null && (
-                                    <span className="text-xs text-green-400">
-                                      Rezultat: {match.home_score}–{match.away_score}
-                                    </span>
-                                  )}
+                              <div key={sectionKey}>
+                                <div className="px-4 py-2 bg-white/5 border-y border-white/10">
+                                  <p className="text-xs font-medium uppercase tracking-wider text-white/40">
+                                    {sectionLabel}
+                                  </p>
                                 </div>
 
-                                {/* Pronostic */}
-                                {pred ? (
-                                  <span className="text-sm font-bold text-white shrink-0">
-                                    {pred.predicted_home}–{pred.predicted_away}
-                                  </span>
-                                ) : (
-                                  <span className="text-xs text-white/25 shrink-0">–</span>
-                                )}
+                                <div className="divide-y divide-white/5">
+                                  {sectionMatches.map(match => {
+                                    const pred = user.predictions.find(p => p.match_id === match.id);
+                                    const result = pred ? calcPoints(pred, match) : null;
 
-                                {/* Puncte */}
-                                <span className="text-xs shrink-0 w-16 text-right">
-                                  {result ? result.label : <span className="text-white/25">–</span>}
-                                </span>
+                                    return (
+                                      <div key={match.id} className="flex items-center gap-2 px-4 py-2.5">
+                                        {/* Meci */}
+                                        <div className="flex-1 min-w-0">
+                                          <span className="text-xs text-white/50 truncate block">
+                                            {match.home_team} vs {match.away_team}
+                                          </span>
+                                          {match.is_finished && match.home_score !== null && (
+                                            <span className="text-xs text-green-400">
+                                              Rezultat: {match.home_score}–{match.away_score}
+                                            </span>
+                                          )}
+                                        </div>
+
+                                        {/* Pronostic */}
+                                        {pred ? (
+                                          <span className="text-sm font-bold text-white shrink-0">
+                                            {pred.predicted_home}–{pred.predicted_away}
+                                          </span>
+                                        ) : (
+                                          <span className="text-xs text-white/25 shrink-0">–</span>
+                                        )}
+
+                                        {/* Puncte */}
+                                        <span className="text-xs shrink-0 w-16 text-right">
+                                          {result ? result.label : <span className="text-white/25">–</span>}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
                             );
                           })
