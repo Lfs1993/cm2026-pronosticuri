@@ -123,6 +123,21 @@ export default function AdminResultsPage() {
     setSaving(null);
   }
 
+  // Ștergere rezultat
+  async function clearResult(matchId: string) {
+    if (!confirm("Ești sigur că vrei să ștergi rezultatul acestui meci?")) return;
+
+    setSaving(matchId);
+    const { error } = await supabase
+      .from("matches")
+      .update({ home_score: null, away_score: null, is_finished: false })
+      .eq("id", matchId);
+
+    if (error) alert(`Eroare la ștergere: ${error.message}`);
+    else await fetchData();
+    setSaving(null);
+  }
+
   // Filtrare
   const availableGroups = [...new Set(
     matches.filter(m => m.stage === "groups" && m.group_name).map(m => m.group_name!)
@@ -287,10 +302,20 @@ export default function AdminResultsPage() {
                         placeholder="–" />
                     </div>
                     <span className="flex-1 font-semibold text-white">{match.away_team}</span>
-                    <button onClick={() => saveResult(match.id)} disabled={saving === match.id}
-                      className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 transition-colors">
-                      {saving === match.id ? "..." : "Salvează"}
-                    </button>
+
+                    {/* Butoane Salvează + Șterge */}
+                    <div className="flex gap-2">
+                      <button onClick={() => saveResult(match.id)} disabled={saving === match.id}
+                        className="rounded-lg bg-amber-500 px-3 py-1.5 text-sm font-semibold text-black hover:bg-amber-400 disabled:opacity-50 transition-colors">
+                        {saving === match.id ? "..." : "Salvează"}
+                      </button>
+                      {match.is_finished && (
+                        <button onClick={() => clearResult(match.id)} disabled={saving === match.id}
+                          className="rounded-lg bg-red-600/80 px-3 py-1.5 text-sm font-semibold text-white hover:bg-red-500 disabled:opacity-50 transition-colors">
+                          🗑
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Pronosticuri useri */}
