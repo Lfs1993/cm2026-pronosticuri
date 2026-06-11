@@ -19,7 +19,7 @@ export function PageBanner({
     <section className="mb-6 overflow-hidden rounded-[32px] border border-white/10 bg-black/20 shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
       <div
         className={`relative w-full bg-[#071327] ${
-          height === "small" ? "h-[170px] md:h-[210px]" : "h-[210px] md:h-[260px]"
+          height === "small" ? "h-[170px] md:h-[210px]" : "h-[280px] md:h-[350px]"
         }`}
       >
         <Image
@@ -27,7 +27,7 @@ export function PageBanner({
           alt={alt}
           fill
           priority
-          className={contain ? "object-contain" : "object-cover object-center"}
+          className={contain ? "object-contain" : "object-cover object-top"}
         />
 
         {/* Gradient întunecat jos și stânga pentru lizibilitate text */}
