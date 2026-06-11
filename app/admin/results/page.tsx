@@ -183,8 +183,15 @@ export default function PredictionsGroupsPage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-[#071327]" />
 
-        <div className="absolute inset-0 flex items-center justify-center">
-          <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
+     <div className="absolute inset-0 flex items-center justify-center">
+  <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">Rezultate Finale – Admin</h1>
+  <Link
+    href="/groups"
+    className="absolute left-4 bottom-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
+  >
+    ← Înapoi
+  </Link>
+</div>
             Pronosticuri Grupe
           </h1>
 
