@@ -25,7 +25,7 @@ type Prediction = {
 };
 
 type PredictionWithMatch = Prediction & {
-  match: Match | null;
+  match: Match;
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -102,7 +102,8 @@ export default function ProfilePage() {
         supabase.from("matches").select("*").order("order_index"),
       ]);
 
-      const name = profileRes.data?.display_name || user.user_metadata?.display_name || "";
+      const name =
+        profileRes.data?.display_name || user.user_metadata?.display_name || "";
       setDisplayName(name);
 
       const mine = (boardRes.data || []).find((x: any) => x.user_id === user.id);
@@ -136,28 +137,31 @@ export default function ProfilePage() {
     window.location.href = "/auth/login";
   }
 
-  const userPredictions = useMemo(() => {
-    return predictions
-      .map((pred) => ({
-        ...pred,
-        match: matches.find((m) => m.id === pred.match_id) || null,
-      }))
-      .filter((row): row is PredictionWithMatch => !!row.match)
-      .sort((a, b) => {
-        const stageDiff =
-          STAGE_ORDER.indexOf(a.match.stage) - STAGE_ORDER.indexOf(b.match.stage);
-        if (stageDiff !== 0) return stageDiff;
+  const userPredictions = useMemo<PredictionWithMatch[]>(() => {
+    const mapped = predictions.map((pred) => ({
+      ...pred,
+      match: matches.find((m) => m.id === pred.match_id) || null,
+    }));
 
-        const mdA = a.match.matchday ?? 0;
-        const mdB = b.match.matchday ?? 0;
-        if (mdA !== mdB) return mdA - mdB;
+    const filtered = mapped.filter(
+      (row): row is Prediction & { match: Match } => row.match !== null
+    );
 
-        const groupA = a.match.group_name ?? "";
-        const groupB = b.match.group_name ?? "";
-        if (groupA !== groupB) return groupA.localeCompare(groupB);
+    return filtered.sort((a, b) => {
+      const stageDiff =
+        STAGE_ORDER.indexOf(a.match.stage) - STAGE_ORDER.indexOf(b.match.stage);
+      if (stageDiff !== 0) return stageDiff;
 
-        return a.match.order_index - b.match.order_index;
-      });
+      const mdA = a.match.matchday ?? 0;
+      const mdB = b.match.matchday ?? 0;
+      if (mdA !== mdB) return mdA - mdB;
+
+      const groupA = a.match.group_name ?? "";
+      const groupB = b.match.group_name ?? "";
+      if (groupA !== groupB) return groupA.localeCompare(groupB);
+
+      return a.match.order_index - b.match.order_index;
+    });
   }, [predictions, matches]);
 
   const groupedByStage = useMemo(() => {
@@ -176,9 +180,14 @@ export default function ProfilePage() {
     }));
   }, [userPredictions]);
 
-  const showMilanCrest = ["flaviu lazar", "lazar flaviu", "flaviu-samuel", "lazar, flaviu-samuel"].includes(
-    normalizeName(displayName)
-  );
+  const showMilanCrest = [
+    "flaviu lazar",
+    "lazar flaviu",
+    "flaviu-samuel",
+    "lazar, flaviu-samuel",
+    "lazar flaviu-samuel",
+    "flaviu-samuel lazar",
+  ].includes(normalizeName(displayName));
 
   return (
     <main className="min-h-screen bg-[#071327]">
@@ -263,7 +272,7 @@ export default function ProfilePage() {
               <img
                 src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Logo_of_AC_Milan.svg"
                 alt="AC Milan"
-                className="h-14 w-14 shrink-0 object-contain"
+                className="h-14 w-14 object-contain"
               />
             )}
           </div>
@@ -275,16 +284,17 @@ export default function ProfilePage() {
           ) : (
             <div className="space-y-8">
               {groupedByStage.map((stageSection) => (
-                <div key={stageSection.stage} className="overflow-hidden rounded-2xl border border-white/10">
+                <div
+                  key={stageSection.stage}
+                  className="overflow-hidden rounded-2xl border border-white/10"
+                >
                   <div className="border-b border-white/10 bg-white/5 px-4 py-3">
                     <h4 className="font-semibold text-white">{stageSection.label}</h4>
                   </div>
 
                   {stageSection.stage === "groups" ? (
                     <div>
-                      {Array.from(
-                        new Set(stageSection.rows.map((row) => row.match.matchday ?? 0))
-                      )
+                      {Array.from(new Set(stageSection.rows.map((row) => row.match.matchday ?? 0)))
                         .sort((a, b) => a - b)
                         .map((matchday) => {
                           const rowsForMatchday = stageSection.rows.filter(
@@ -329,11 +339,13 @@ export default function ProfilePage() {
                                               <span className="block truncate text-xs text-white/50">
                                                 {row.match.home_team} vs {row.match.away_team}
                                               </span>
-                                              {row.match.is_finished && row.match.home_score !== null && (
-                                                <span className="text-xs text-green-400">
-                                                  Rezultat: {row.match.home_score}–{row.match.away_score}
-                                                </span>
-                                              )}
+                                              {row.match.is_finished &&
+                                                row.match.home_score !== null && (
+                                                  <span className="text-xs text-green-400">
+                                                    Rezultat: {row.match.home_score}–
+                                                    {row.match.away_score}
+                                                  </span>
+                                                )}
                                             </div>
 
                                             <span className="shrink-0 text-sm font-bold text-white">
@@ -356,9 +368,7 @@ export default function ProfilePage() {
                     </div>
                   ) : (
                     <div>
-                      {Array.from(
-                        new Set(stageSection.rows.map((row) => row.match.matchday ?? 0))
-                      )
+                      {Array.from(new Set(stageSection.rows.map((row) => row.match.matchday ?? 0)))
                         .sort((a, b) => a - b)
                         .map((matchday) => {
                           const rowsForMatchday = stageSection.rows.filter(
@@ -386,11 +396,13 @@ export default function ProfilePage() {
                                         <span className="block truncate text-xs text-white/50">
                                           {row.match.home_team} vs {row.match.away_team}
                                         </span>
-                                        {row.match.is_finished && row.match.home_score !== null && (
-                                          <span className="text-xs text-green-400">
-                                            Rezultat: {row.match.home_score}–{row.match.away_score}
-                                          </span>
-                                        )}
+                                        {row.match.is_finished &&
+                                          row.match.home_score !== null && (
+                                            <span className="text-xs text-green-400">
+                                              Rezultat: {row.match.home_score}–
+                                              {row.match.away_score}
+                                            </span>
+                                          )}
                                       </div>
 
                                       <span className="shrink-0 text-sm font-bold text-white">
