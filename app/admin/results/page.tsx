@@ -93,10 +93,12 @@ export default function AdminResultsPage() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [matchRes, predRes] = await Promise.all([
+    const [matchRes, predRes, profilesRes] = await Promise.all([
       supabase.from("matches").select("*").order("order_index"),
-      supabase.from("predictions").select("user_id, match_id, predicted_home, predicted_away, profiles(display_name)"),
+      supabase.from("predictions").select("user_id, match_id, predicted_home, predicted_away"),
+      supabase.from("profiles").select("id, display_name"),
     ]);
+
     if (matchRes.data) {
       setMatches(matchRes.data);
       const initial: Record<string, { home: string; away: string }> = {};
@@ -105,9 +107,21 @@ export default function AdminResultsPage() {
       });
       setScores(initial);
     }
-    if (predRes.data) setPredictions(predRes.data as Prediction[]);
+
+    if (predRes.data && profilesRes.data) {
+      const profileMap: Record<string, string> = {};
+      profilesRes.data.forEach((p: { id: string; display_name: string }) => {
+        profileMap[p.id] = p.display_name;
+      });
+      const predsWithProfiles = predRes.data.map((p: { user_id: string; match_id: string; predicted_home: number; predicted_away: number }) => ({
+        ...p,
+        profiles: [{ display_name: profileMap[p.user_id] ?? "User" }],
+      }));
+      setPredictions(predsWithProfiles as Prediction[]);
+    }
+
     setLoading(false);
-  }, []);
+  }, [])
 
   useEffect(() => { if (profile) fetchData(); }, [profile, fetchData]);
 
