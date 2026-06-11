@@ -123,7 +123,21 @@ export default function GroupsCM2026Page() {
   return (
     <main className="min-h-screen bg-[#071327]">
       <AppShell>
-        <PageBanner src="/images/grupele.jpg" alt="Grupele CM 2026" title="Grupele CM 2026" subtitle="Clasamente + scoruri actualizate din Admin." />
+        <section className="mb-6 overflow-hidden rounded-[32px] border border-white/10 bg-black/20 shadow-[0_10px_30px_rgba(0,0,0,0.22)]">
+  <div className="relative w-full flex items-center justify-center bg-[#071327]" style={{minHeight: '420px'}}>
+    <img
+      src="/images/grupele.jpg"
+      alt="Grupele CM 2026"
+      className="w-full max-w-[500px] object-contain"
+      style={{maxHeight: '520px'}}
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-[#071327]/80 via-transparent to-transparent" />
+    <div className="absolute bottom-6 left-0 right-0 text-center">
+      <h2 className="text-3xl font-bold text-white drop-shadow-lg">Grupele CM 2026</h2>
+      <p className="mt-1 text-white/70 text-sm">Clasamente + scoruri actualizate din Admin.</p>
+    </div>
+  </div>
+</section>
 
         {loading ? (
           <div className="rounded-[28px] border border-white/10 bg-white/5 p-6">Se încarcă...</div>
