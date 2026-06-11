@@ -1,6 +1,6 @@
-// app/predictions/knockout/page.tsx
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
@@ -19,14 +19,63 @@ type Match = {
 
 type PredictionMap = Record<string, { home: string; away: string }>
 
-// Fără round32!
 const KNOCKOUT_STAGES = [
-  { key: 'round16', label: 'Optimi de finală'  },
-  { key: 'quarter', label: 'Sferturi de finală' },
-  { key: 'semi',    label: 'Semifinale'          },
-  { key: 'third',   label: 'Finala mică'          },
-  { key: 'final',   label: 'Finala'               },
+  { key: 'round16', label: 'Optimi de finală'   },
+  { key: 'quarter', label: 'Sferturi de finală'  },
+  { key: 'semi',    label: 'Semifinale'           },
+  { key: 'third',   label: 'Finala mică'           },
+  { key: 'final',   label: 'Finala'                },
 ]
+
+// Etichete oficiale pentru meciurile din Optimi (Round of 16)
+// Bazate pe structura reală CM 2026
+const ROUND16_LABELS: Record<number, { home: string; away: string }> = {
+  1:  { home: 'Câșt. Grupa A',   away: 'Locul 2 Grupa B'  },
+  2:  { home: 'Câșt. Grupa C',   away: 'Locul 2 Grupa D'  },
+  3:  { home: 'Câșt. Grupa E',   away: 'Locul 2 Grupa F'  },
+  4:  { home: 'Câșt. Grupa G',   away: 'Locul 2 Grupa H'  },
+  5:  { home: 'Câșt. Grupa I',   away: 'Locul 2 Grupa J'  },
+  6:  { home: 'Câșt. Grupa K',   away: 'Locul 2 Grupa L'  },
+  7:  { home: 'Câșt. Grupa B',   away: 'Locul 2 Grupa A'  },
+  8:  { home: 'Câșt. Grupa D',   away: 'Locul 2 Grupa C'  },
+  9:  { home: 'Câșt. Grupa F',   away: 'Locul 2 Grupa E'  },
+  10: { home: 'Câșt. Grupa H',   away: 'Locul 2 Grupa G'  },
+  11: { home: 'Câșt. Grupa J',   away: 'Locul 2 Grupa I'  },
+  12: { home: 'Câșt. Grupa L',   away: 'Locul 2 Grupa K'  },
+  13: { home: 'Câșt. Optimi 1',  away: 'Câșt. Optimi 2'   },
+  14: { home: 'Câșt. Optimi 3',  away: 'Câșt. Optimi 4'   },
+  15: { home: 'Câșt. Optimi 5',  away: 'Câșt. Optimi 6'   },
+  16: { home: 'Câșt. Optimi 7',  away: 'Câșt. Optimi 8'   },
+}
+
+const QUARTER_LABELS: Record<number, { home: string; away: string }> = {
+  1: { home: 'Câșt. Optimi 1', away: 'Câșt. Optimi 2' },
+  2: { home: 'Câșt. Optimi 3', away: 'Câșt. Optimi 4' },
+  3: { home: 'Câșt. Optimi 5', away: 'Câșt. Optimi 6' },
+  4: { home: 'Câșt. Optimi 7', away: 'Câșt. Optimi 8' },
+}
+
+const SEMI_LABELS: Record<number, { home: string; away: string }> = {
+  1: { home: 'Câșt. Sfert 1', away: 'Câșt. Sfert 2' },
+  2: { home: 'Câșt. Sfert 3', away: 'Câșt. Sfert 4' },
+}
+
+function getMatchLabel(stage: string, index: number, homeTeam: string, awayTeam: string): { home: string; away: string } {
+  // Dacă echipele sunt deja completate (nu TBD/goale), folosim echipele reale
+  const isReal = (t: string) => t && t !== 'TBD' && !t.startsWith('Winner') && !t.startsWith('W ')
+  if (isReal(homeTeam) && isReal(awayTeam)) {
+    return { home: homeTeam, away: awayTeam }
+  }
+
+  const i = index + 1
+  if (stage === 'round16' && ROUND16_LABELS[i]) return ROUND16_LABELS[i]
+  if (stage === 'quarter' && QUARTER_LABELS[i]) return QUARTER_LABELS[i]
+  if (stage === 'semi' && SEMI_LABELS[i]) return SEMI_LABELS[i]
+  if (stage === 'third') return { home: 'Perdant Semifinală 1', away: 'Perdant Semifinală 2' }
+  if (stage === 'final') return { home: 'Câșt. Semifinală 1', away: 'Câșt. Semifinală 2' }
+
+  return { home: homeTeam || 'TBD', away: awayTeam || 'TBD' }
+}
 
 export default function PredictionsKnockoutPage() {
   const router = useRouter()
@@ -68,7 +117,6 @@ export default function PredictionsKnockoutPage() {
     init()
   }, [])
 
-  // Sincronizare filtru cu faza activă
   useEffect(() => {
     if (!activePhase) return
     const exists = KNOCKOUT_STAGES.find(s => s.key === activePhase)
@@ -121,6 +169,12 @@ export default function PredictionsKnockoutPage() {
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
             Pronosticuri Faze Eliminatorii
           </h1>
+          <Link
+            href="/groups"
+            className="absolute left-4 bottom-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
+          >
+            ← Înapoi
+          </Link>
         </div>
       </div>
 
@@ -162,10 +216,11 @@ export default function PredictionsKnockoutPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredMatches.map(match => {
+            {filteredMatches.map((match, index) => {
               const pred = predictions[match.id] ?? { home: '', away: '' }
               const locked = currentStageLocked || match.is_finished
               const wasSaved = saved[match.id]
+              const labels = getMatchLabel(match.stage, index, match.home_team, match.away_team)
 
               return (
                 <div key={match.id}
@@ -173,18 +228,22 @@ export default function PredictionsKnockoutPage() {
                     locked ? 'border-white/5 opacity-75' : 'border-white/10'
                   }`}>
 
-                  {match.is_finished && match.home_score !== null && (
-                    <div className="px-3 py-1 bg-white/5 border-b border-white/5">
-                      <span className="text-xs text-green-400">
-                        Rezultat final: {match.home_score} – {match.away_score}
-                      </span>
-                    </div>
-                  )}
+                  {/* Header cu eticheta meciului */}
+                  <div className="px-3 py-1.5 bg-white/5 border-b border-white/5">
+                    <span className="text-xs text-white/40">
+                      Meciul {index + 1}
+                      {match.is_finished && match.home_score !== null && (
+                        <span className="ml-2 text-green-400">
+                          Rezultat final: {match.home_score} – {match.away_score}
+                        </span>
+                      )}
+                    </span>
+                  </div>
 
                   <div className="flex items-center gap-3 px-4 py-3">
-                    <span className="flex-1 text-right font-semibold text-white text-sm">
-                      {match.home_team || 'TBD'}
-                    </span>
+                    <div className="flex-1 text-right">
+                      <span className="font-semibold text-white text-sm">{labels.home}</span>
+                    </div>
 
                     <div className="flex items-center gap-2">
                       <input type="number" min={0} max={99} value={pred.home} disabled={locked}
@@ -198,13 +257,13 @@ export default function PredictionsKnockoutPage() {
                         placeholder="–" />
                     </div>
 
-                    <span className="flex-1 font-semibold text-white text-sm">
-                      {match.away_team || 'TBD'}
-                    </span>
+                    <div className="flex-1">
+                      <span className="font-semibold text-white text-sm">{labels.away}</span>
+                    </div>
 
                     {!locked && (
                       <button onClick={() => savePrediction(match.id)} disabled={saving === match.id}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
                           wasSaved ? 'bg-green-600 text-white' : 'bg-amber-500 text-black hover:bg-amber-400'
                         } disabled:opacity-50`}>
                         {saving === match.id ? '...' : wasSaved ? '✓ Salvat' : 'Salvează'}
