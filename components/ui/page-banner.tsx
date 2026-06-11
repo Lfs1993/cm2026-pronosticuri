@@ -27,14 +27,19 @@ export function PageBanner({
           alt={alt}
           fill
           priority
-          className={contain ? "object-contain" : "object-cover"}
+          className={contain ? "object-contain" : "object-cover object-center"}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-r from-[#071327]/70 via-[#071327]/30 to-[#071327]/10" />
+        {/* Gradient întunecat jos și stânga pentru lizibilitate text */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#071327]/90 via-[#071327]/30 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#071327]/60 via-transparent to-transparent" />
 
-        <div className="absolute inset-x-0 bottom-0 p-6 md:p-8">
-          <h2 className="text-3xl font-bold md:text-4xl">{title}</h2>
-          {subtitle ? <p className="mt-2 text-white/80">{subtitle}</p> : null}
+        {/* Text centrat vertical și orizontal */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-6">
+          <h2 className="text-3xl font-bold md:text-4xl drop-shadow-lg">{title}</h2>
+          {subtitle ? (
+            <p className="mt-2 text-white/75 text-sm md:text-base drop-shadow">{subtitle}</p>
+          ) : null}
         </div>
       </div>
     </section>
