@@ -82,6 +82,8 @@ export default function PredictionsGroupsPage() {
         const map: PredictionMap = {};
         predRes.data.forEach((p: { match_id: string; predicted_home: number; predicted_away: number }) => {
           map[p.match_id] = { home: p.predicted_home.toString(), away: p.predicted_away.toString() };
+          // Marcăm ca salvat inițial dacă există în baza de date
+          setSaved(prev => ({ ...prev, [p.match_id]: true }));
         });
         setPredictions(map);
       }
@@ -143,7 +145,10 @@ export default function PredictionsGroupsPage() {
       { onConflict: "user_id,match_id" }
     );
     if (error) showToast(`Eroare: ${error.message}`);
-    else { setSaved(prev => ({ ...prev, [matchId]: true })); showToast("Salvat!"); }
+    else { 
+      setSaved(prev => ({ ...prev, [matchId]: true })); 
+      showToast("Salvat!"); 
+    }
     setSaving(null);
   }
 
@@ -268,9 +273,13 @@ export default function PredictionsGroupsPage() {
             <div className="space-y-3">
               {filteredMatches.map(match => {
                 const pred = predictions[match.id] ?? { home: "", away: "" };
-                const alreadySaved = pred.home !== "" && pred.away !== "";
-                const locked = currentMatchdayLocked || match.is_finished || alreadySaved;
-                const wasSaved = saved[match.id];
+                
+                // MODIFICARE: Scoatem `alreadySaved` din lock-ul vizual pentru a permite editări multiple în ferestrele active
+                const locked = currentMatchdayLocked || match.is_finished;
+                
+                // Resetăm starea de text "Salvat" dacă utilizatorul modifică din nou inputurile
+                const wasSaved = saved[match.id] && pred.home !== "" && pred.away !== "";
+
                 return (
                   <div key={match.id}
                     className={`overflow-hidden rounded-xl border bg-white/5 ${locked ? "border-white/5 opacity-75" : "border-white/10"}`}>
@@ -286,12 +295,18 @@ export default function PredictionsGroupsPage() {
                       <span className="flex-1 text-right text-sm font-semibold text-white">{match.home_team}</span>
                       <div className="flex items-center gap-2">
                         <input type="number" min={0} max={99} value={pred.home} disabled={locked}
-                          onChange={e => setPredictions(prev => ({ ...prev, [match.id]: { ...(prev[match.id] ?? { home: "", away: "" }), home: e.target.value } }))}
+                          onChange={e => {
+                            setSaved(prev => ({ ...prev, [match.id]: false })); // resetăm starea de salvat la tastare
+                            setPredictions(prev => ({ ...prev, [match.id]: { ...(prev[match.id] ?? { home: "", away: "" }), home: e.target.value } }));
+                          }}
                           className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white outline-none focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-40"
                           placeholder="–" />
                         <span className="text-white/40">:</span>
                         <input type="number" min={0} max={99} value={pred.away} disabled={locked}
-                          onChange={e => setPredictions(prev => ({ ...prev, [match.id]: { ...(prev[match.id] ?? { home: "", away: "" }), away: e.target.value } }))}
+                          onChange={e => {
+                            setSaved(prev => ({ ...prev, [match.id]: false })); // resetăm starea de salvat la tastare
+                            setPredictions(prev => ({ ...prev, [match.id]: { ...(prev[match.id] ?? { home: "", away: "" }), away: e.target.value } }));
+                          }}
                           className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white outline-none focus:border-amber-500 disabled:cursor-not-allowed disabled:opacity-40"
                           placeholder="–" />
                       </div>
@@ -321,7 +336,6 @@ export default function PredictionsGroupsPage() {
         {/* ─── TAB OTHERS ─── */}
         {activeTab === "others" && (
           <div className="space-y-4">
-
             {/* Selector user */}
             <div className="flex flex-wrap gap-2">
               <button onClick={() => setSelectedUser(null)}
