@@ -1,174 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import if (!home || !away) return;import { supabase } from "@/lib/supabase";
-
-      addResult(home, m.home_score as number, m.away_score as number);
-      addResult(away, m.away_score as number, m.home_score as number);
-    });
-
-  Object.keys(standings).forEach((group) => {
-    standings[group].sort(
-      (a, b) =>
-        b.pts - a.pts ||
-        b.gd - a.gd ||
-        b.gf - a.gf ||
-        b.wins - a.wins ||
-        a.team.localeCompare(b.team)
-    );
-  });
-
-  return standings;
-}
-
-function getBestThirds(standings: Record<string, Standing[]>) {
-  return Object.values(standings)
-    .map((rows) => rows[2])
-    .filter((row): row is Standing => Boolean(row))
-    .sort(
-      (a, b) =>
-        b.pts - a.pts ||
-        b.gd - a.gd ||
-        b.gf - a.gf ||
-        b.wins - a.wins ||
-        a.team.localeCompare(b.team)
-    )
-    .slice(0, 8);
-}
-
-function resolveGroupToken(token: string, standings: Record<string, Standing[]>) {
-  const direct = token.match(/^([A-L])([12])$/);
-
-  if (direct) {
-    const group = direct[1];
-    const position = Number(direct[2]) - 1;
-    return standings[group]?.[position]?.team ?? token;
-  }
-
-  if (token.startsWith("Best 3rd ")) {
-    const eligibleGroups = token.replace("Best 3rd ", "").split("/");
-    const found = getBestThirds(standings).find((team) =>
-      eligibleGroups.includes(team.group)
-    );
-
-    return found?.team ?? token;
-  }
-
-  return token;
-}
-
-function resolveWinnerOrLoser(
-  token: string,
-  matches: Match[],
-  standings: Record<string, Standing[]>
-) {
-  if (token.startsWith("Winner ")) {
-    const order = Number(token.replace("Winner ", ""));
-    const match = matches.find((m) => m.order_index === order);
-
-    if (
-      !match ||
-      !match.is_finished ||
-      match.home_score === null ||
-      match.away_score === null
-    ) {
-      return `Câștigătoare Meciul ${order}`;
-    }
-
-    const label = resolveLabel(match, matches, standings);
-
-    if (match.home_score > match.away_score) return label.home;
-    if (match.away_score > match.home_score) return label.away;
-
-    return `Câștigătoare Meciul ${order}`;
-  }
-
-  if (token.startsWith("Loser ")) {
-    const order = Number(token.replace("Loser ", ""));
-    const match = matches.find((m) => m.order_index === order);
-
-    if (
-      !match ||
-      !match.is_finished ||
-      match.home_score === null ||
-      match.away_score === null
-    ) {
-      return `Perdantă Meciul ${order}`;
-    }
-
-    const label = resolveLabel(match, matches, standings);
-
-    if (match.home_score < match.away_score) return label.home;
-    if (match.away_score < match.home_score) return label.away;
-
-    return `Perdantă Meciul ${order}`;
-  }
-
-  return token;
-}
-
-function resolveTeam(
-  token: string,
-  matches: Match[],
-  standings: Record<string, Standing[]>
-) {
-  const groupResolved = resolveGroupToken(token, standings);
-  if (groupResolved !== token) return groupResolved;
-
-  return resolveWinnerOrLoser(token, matches, standings);
-}
-
-function resolveLabel(
-  match: Match,
-  matches: Match[],
-  standings: Record<string, Standing[]>
-) {
-  if (match.stage === "third") {
-    return {
-      home: resolveTeam("Loser 101", matches, standings),
-      away: resolveTeam("Loser 102", matches, standings),
-      subtitle: `Meciul ${match.order_index}`,
-    };
-  }
-
-  if (match.stage === "final") {
-    return {
-      home: resolveTeam("Winner 101", matches, standings),
-      away: resolveTeam("Winner 102", matches, standings),
-      subtitle: `Meciul ${match.order_index}`,
-    };
-  }
-
-  return {
-    home: resolveTeam(match.home_team, matches, standings),
-    away: resolveTeam(match.away_team, matches, standings),
-    subtitle: `Meciul ${match.order_index}`,
-  };
-}
-
-export default function PredictionsKnockoutPage() {
-  const router = useRouter();
-  const { activePhase, loading: phaseLoading } = useActivePhase();
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [predictions, setPredictions] = useState<PredictionMap>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [filterStage, setFilterStage] = useState("round32");
-  const [toast, setToast] = useState<string | null>(null);
-
-  const standings = useMemo(() => buildStandings(matches), [matches]);
-
-  function showToast(message: string) {
-    setToast(message);
-    setTimeout(() => setToast(null), 2500);
-  }
-
-  useEffect(() => {
-    async function init() {
+import { useEffect function init() {import { useEffect, useMemo, useState } from "react";
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -181,7 +14,6 @@ export default function PredictionsKnockoutPage() {
       setUserId(user.id);
 
       const validStages = [
-        "groups",
         "round32",
         "round16",
         "quarter",
@@ -210,11 +42,12 @@ export default function PredictionsKnockoutPage() {
         const map: PredictionMap = {};
         const savedMap: Record<string, boolean> = {};
 
-        predRes.data.forEach((p) => {
+        predRes.data.forEach((p: any) => {
           map[p.match_id] = {
             home: String(p.predicted_home),
             away: String(p.predicted_away),
           };
+
           savedMap[p.match_id] = true;
         });
 
@@ -236,12 +69,14 @@ export default function PredictionsKnockoutPage() {
     }
   }, [activePhase]);
 
-  function isStageLocked(stage: string) {
+  function isStageLocked(stageKey: string): boolean {
     if (!activePhase) return true;
+
     if (["groups1", "groups2", "groups3", "closed"].includes(activePhase)) {
       return true;
     }
-    return activePhase !== stage;
+
+    return activePhase !== stageKey;
   }
 
   async function savePrediction(matchId: string) {
@@ -307,10 +142,9 @@ export default function PredictionsKnockoutPage() {
     showToast("Pronosticul a fost șters.");
   }
 
-  const knockoutMatches = matches.filter((match) => match.stage !== "groups");
-  const filteredMatches = knockoutMatches.filter(
-    (match) => match.stage === filterStage
-  );
+  const filteredMatches = useMemo(() => {
+    return matches.filter((match) => match.stage === filterStage);
+  }, [matches, filterStage]);
 
   const currentStageLocked = isStageLocked(filterStage);
   const currentStageInfo = KNOCKOUT_STAGES.find(
@@ -331,6 +165,7 @@ export default function PredictionsKnockoutPage() {
           alt="Pronosticuri Faze Eliminatorii"
           className="h-full w-full object-cover object-center"
         />
+
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-gray-950" />
 
         <div className="absolute inset-0 flex items-center justify-center">
@@ -358,8 +193,12 @@ export default function PredictionsKnockoutPage() {
               }`}
             >
               {currentStageLocked
-                ? `🔒 ${currentStageInfo?.label ?? filterStage} este închisă pentru pronosticuri.`
-                : `✅ ${currentStageInfo?.label ?? filterStage} este deschisă – poți introduce pronosticuri!`}
+                ? `🔒 ${
+                    currentStageInfo?.label ?? filterStage
+                  } este închisă pentru pronosticuri.`
+                : `✅ ${
+                    currentStageInfo?.label ?? filterStage
+                  } este deschisă – poți introduce pronosticuri!`}
             </div>
           )}
 
@@ -394,7 +233,6 @@ export default function PredictionsKnockoutPage() {
               const pred = predictions[match.id] ?? { home: "", away: "" };
               const locked = currentStageLocked || match.is_finished;
               const wasSaved = saved[match.id];
-              const labels = resolveLabel(match, matches, standings);
 
               return (
                 <div
@@ -405,7 +243,8 @@ export default function PredictionsKnockoutPage() {
                 >
                   <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-3 py-1.5">
                     <span className="text-xs text-white/40">
-                      {labels.subtitle}
+                      Meciul {match.order_index} ·{" "}
+                      {STAGE_LABELS[match.stage] ?? match.stage}
                     </span>
 
                     {match.is_finished &&
@@ -420,7 +259,7 @@ export default function PredictionsKnockoutPage() {
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 text-right">
                       <span className="text-sm font-semibold text-white">
-                        {labels.home}
+                        {match.home_team}
                       </span>
                     </div>
 
@@ -435,7 +274,10 @@ export default function PredictionsKnockoutPage() {
                           setPredictions((prev) => ({
                             ...prev,
                             [match.id]: {
-                              ...(prev[match.id] ?? { home: "", away: "" }),
+                              ...(prev[match.id] ?? {
+                                home: "",
+                                away: "",
+                              }),
                               home: e.target.value,
                             },
                           }))
@@ -456,7 +298,10 @@ export default function PredictionsKnockoutPage() {
                           setPredictions((prev) => ({
                             ...prev,
                             [match.id]: {
-                              ...(prev[match.id] ?? { home: "", away: "" }),
+                              ...(prev[match.id] ?? {
+                                home: "",
+                                away: "",
+                              }),
                               away: e.target.value,
                             },
                           }))
@@ -468,7 +313,7 @@ export default function PredictionsKnockoutPage() {
 
                     <div className="flex-1">
                       <span className="text-sm font-semibold text-white">
-                        {labels.away}
+                        {match.away_team}
                       </span>
                     </div>
 
@@ -508,7 +353,9 @@ export default function PredictionsKnockoutPage() {
     </div>
   );
 }
+``
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { useActivePhase } from "@/lib/useActivePhase";
 
 type Match = {
@@ -526,16 +373,6 @@ type Match = {
 
 type PredictionMap = Record<string, { home: string; away: string }>;
 
-type Standing = {
-  team: string;
-  group: string;
-  pts: number;
-  gf: number;
-  ga: number;
-  gd: number;
-  wins: number;
-};
-
 const KNOCKOUT_STAGES = [
   { key: "round32", label: "Șaisprezecimi" },
   { key: "round16", label: "Optimi de finală" },
@@ -545,7 +382,7 @@ const KNOCKOUT_STAGES = [
   { key: "final", label: "Finala" },
 ];
 
-const STAGE_TITLES: Record<string, string> = {
+const STAGE_LABELS: Record<string, string> = {
   round32: "Șaisprezecimi",
   round16: "Optimi de finală",
   quarter: "Sferturi de finală",
@@ -554,62 +391,22 @@ const STAGE_TITLES: Record<string, string> = {
   final: "Finala",
 };
 
-function emptyStanding(team: string, group: string): Standing {
-  return {
-    team,
-    group,
-    pts: 0,
-    gf: 0,
-    ga: 0,
-    gd: 0,
-    wins: 0,
-  };
-}
+export default function PredictionsKnockoutPage() {
+  const router = useRouter();
+  const { activePhase, loading: phaseLoading } = useActivePhase();
 
-function addResult(row: Standing, gf: number, ga: number) {
-  row.gf += gf;
-  row.ga += ga;
-  row.gd += gf - ga;
+  const [userId, setUserId] = useState<string | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<PredictionMap>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [filterStage, setFilterStage] = useState<string>("round32");
+  const [toast, setToast] = useState<string | null>(null);
 
-  if (gf > ga) {
-    row.pts += 3;
-    row.wins += 1;
-  } else if (gf === ga) {
-    row.pts += 1;
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
   }
-}
 
-function buildStandings(matches: Match[]) {
-  const standings: Record<string, Standing[]> = {};
-
-  matches
-    .filter((m) => m.stage === "groups" && m.group_name)
-    .forEach((m) => {
-      const group = m.group_name as string;
-
-      standings[group] ??= [];
-
-      if (!standings[group].some((t) => t.team === m.home_team)) {
-        standings[group].push(emptyStanding(m.home_team, group));
-      }
-
-      if (!standings[group].some((t) => t.team === m.away_team)) {
-        standings[group].push(emptyStanding(m.away_team, group));
-      }
-    });
-
-  matches
-    .filter(
-      (m) =>
-        m.stage === "groups" &&
-        m.group_name &&
-        m.is_finished &&
-        m.home_score !== null &&
-        m.away_score !== null
-    )
-    .forEach((m) => {
-      const group = m.group_name as string;
-
-      const home = standings[group]?.find((t) => t.team === m.home_team);
-      const away = standings[group]?.find((t) => t.team === m.away_team);
-
+  useEffect(() => {
