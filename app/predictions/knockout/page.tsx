@@ -1,7 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect function init() {import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
+import { useActivePhase } from "@/lib/useActivePhase";
+
+type Match = {
+  id: string;
+  stage: string;
+  group_name: string | null;
+  matchday: number | null;
+  order_index: number;
+  home_team: string;
+  away_team: string;
+  home_score: number | null;
+  away_score: number | null;
+  is_finished: boolean;
+};
+
+type PredictionMap = Record<string, { home: string; away: string }>;
+
+const KNOCKOUT_STAGES = [
+  { key: "round32", label: "Șaisprezecimi" },
+  { key: "round16", label: "Optimi de finală" },
+  { key: "quarter", label: "Sferturi de finală" },
+  { key: "semi", label: "Semifinale" },
+  { key: "third", label: "Finala mică" },
+  { key: "final", label: "Finala" },
+];
+
+const STAGE_LABELS: Record<string, string> = {
+  round32: "Șaisprezecimi",
+  round16: "Optimi de finală",
+  quarter: "Sferturi de finală",
+  semi: "Semifinale",
+  third: "Finala mică",
+  final: "Finala",
+};
+
+export default function PredictionsKnockoutPage() {
+  const router = useRouter();
+  const { activePhase, loading: phaseLoading } = useActivePhase();
+
+  const [userId, setUserId] = useState<string | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<PredictionMap>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [filterStage, setFilterStage] = useState<string>("round32");
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  }
+
+  useEffect(() => {
+    async function init() {
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -353,60 +410,3 @@ import { useEffect function init() {import { useEffect, useMemo, useState } from
     </div>
   );
 }
-``
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
-import { useActivePhase } from "@/lib/useActivePhase";
-
-type Match = {
-  id: string;
-  stage: string;
-  group_name: string | null;
-  matchday: number | null;
-  order_index: number;
-  home_team: string;
-  away_team: string;
-  home_score: number | null;
-  away_score: number | null;
-  is_finished: boolean;
-};
-
-type PredictionMap = Record<string, { home: string; away: string }>;
-
-const KNOCKOUT_STAGES = [
-  { key: "round32", label: "Șaisprezecimi" },
-  { key: "round16", label: "Optimi de finală" },
-  { key: "quarter", label: "Sferturi de finală" },
-  { key: "semi", label: "Semifinale" },
-  { key: "third", label: "Finala mică" },
-  { key: "final", label: "Finala" },
-];
-
-const STAGE_LABELS: Record<string, string> = {
-  round32: "Șaisprezecimi",
-  round16: "Optimi de finală",
-  quarter: "Sferturi de finală",
-  semi: "Semifinale",
-  third: "Finala mică",
-  final: "Finala",
-};
-
-export default function PredictionsKnockoutPage() {
-  const router = useRouter();
-  const { activePhase, loading: phaseLoading } = useActivePhase();
-
-  const [userId, setUserId] = useState<string | null>(null);
-  const [matches, setMatches] = useState<Match[]>([]);
-  const [predictions, setPredictions] = useState<PredictionMap>({});
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
-  const [saved, setSaved] = useState<Record<string, boolean>>({});
-  const [filterStage, setFilterStage] = useState<string>("round32");
-  const [toast, setToast] = useState<string | null>(null);
-
-  function showToast(message: string) {
-    setToast(message);
-    setTimeout(() => setToast(null), 2500);
-  }
-
-  useEffect(() => {
