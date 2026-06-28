@@ -2,94 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
-import { useActivePhase } from "@/lib/useActivePhase";
-
-type Match = {
-  id: string;
-  stage: string;
-  group_name: string | null;
-  matchday: number | null;
-  order_index: number;
-  home_team: string;
-  away_team: string;
-  home_score: number | null;
-  away_score: number | null;
-  is_finished: boolean;
-};
-
-type PredictionMap = Record<string, { home: string; away: string }>;
-
-type Standing = {
-  team: string;
-  group: string;
-  pts: number;
-  gf: number;
-  ga: number;
-  gd: number;
-  wins: number;
-};
-
-const KNOCKOUT_STAGES = [
-  { key: "round32", label: "Șaisprezecimi" },
-  { key: "round16", label: "Optimi de finală" },
-  { key: "quarter", label: "Sferturi de finală" },
-  { key: "semi", label: "Semifinale" },
-  { key: "third", label: "Finala mică" },
-  { key: "final", label: "Finala" },
-];
-
-function emptyStanding(team: string, group: string): Standing {
-  return { team, group, pts: 0, gf: 0, ga: 0, gd: 0, wins: 0 };
-}
-
-function addResult(row: Standing, gf: number, ga: number) {
-  row.gf += gf;
-  row.ga += ga;
-  row.gd += gf - ga;
-
-  if (gf > ga) {
-    row.pts += 3;
-    row.wins += 1;
-  } else if (gf === ga) {
-    row.pts += 1;
-  }
-}
-
-function buildStandings(matches: Match[]) {
-  const standings: Record<string, Standing[]> = {};
-
-  matches
-    .filter((m) => m.stage === "groups" && m.group_name)
-    .forEach((m) => {
-      const group = m.group_name as string;
-      standings[group] ??= [];
-
-      if (!standings[group].some((t) => t.team === m.home_team)) {
-        standings[group].push(emptyStanding(m.home_team, group));
-      }
-
-      if (!standings[group].some((t) => t.team === m.away_team)) {
-        standings[group].push(emptyStanding(m.away_team, group));
-      }
-    });
-
-  matches
-    .filter(
-      (m) =>
-        m.stage === "groups" &&
-        m.group_name &&
-        m.is_finished &&
-        m.home_score !== null &&
-        m.away_score !== null
-    )
-    .forEach((m) => {
-      const group = m.group_name as string;
-      const home = standings[group]?.find((t) => t.team === m.home_team);
-      const away = standings[group]?.find((t) => t.team === m.away_team);
-
-      if (!home || !away) return;
+import if (!home || !away) return;import { supabase } from "@/lib/supabase";
 
       addResult(home, m.home_score as number, m.away_score as number);
       addResult(away, m.away_score as number, m.home_score as number);
@@ -109,10 +22,10 @@ function buildStandings(matches: Match[]) {
   return standings;
 }
 
-function bestThirds(standings: Record<string, Standing[]>) {
+function getBestThirds(standings: Record<string, Standing[]>) {
   return Object.values(standings)
     .map((rows) => rows[2])
-    .filter(Boolean)
+    .filter((row): row is Standing => Boolean(row))
     .sort(
       (a, b) =>
         b.pts - a.pts ||
@@ -125,64 +38,97 @@ function bestThirds(standings: Record<string, Standing[]>) {
 }
 
 function resolveGroupToken(token: string, standings: Record<string, Standing[]>) {
-  const short = token.match(/^([A-L])([12])$/);
+  const direct = token.match(/^([A-L])([12])$/);
 
-  if (short) {
-    const group = short[1];
-    const pos = Number(short[2]) - 1;
-    return standings[group]?.[pos]?.team ?? token;
+  if (direct) {
+    const group = direct[1];
+    const position = Number(direct[2]) - 1;
+    return standings[group]?.[position]?.team ?? token;
   }
 
   if (token.startsWith("Best 3rd ")) {
-    const eligible = token.replace("Best 3rd ", "").split("/");
-    const found = bestThirds(standings).find((t) => eligible.includes(t.group));
+    const eligibleGroups = token.replace("Best 3rd ", "").split("/");
+    const found = getBestThirds(standings).find((team) =>
+      eligibleGroups.includes(team.group)
+    );
+
     return found?.team ?? token;
   }
 
   return token;
 }
 
-function resolveWinnerOrLoser(token: string, matches: Match[], standings: Record<string, Standing[]>) {
+function resolveWinnerOrLoser(
+  token: string,
+  matches: Match[],
+  standings: Record<string, Standing[]>
+) {
   if (token.startsWith("Winner ")) {
     const order = Number(token.replace("Winner ", ""));
     const match = matches.find((m) => m.order_index === order);
 
-    if (!match || !match.is_finished || match.home_score === null || match.away_score === null) {
+    if (
+      !match ||
+      !match.is_finished ||
+      match.home_score === null ||
+      match.away_score === null
+    ) {
       return `Câștigătoare Meciul ${order}`;
     }
 
     const label = resolveLabel(match, matches, standings);
-    return match.home_score > match.away_score ? label.home : label.away;
+
+    if (match.home_score > match.away_score) return label.home;
+    if (match.away_score > match.home_score) return label.away;
+
+    return `Câștigătoare Meciul ${order}`;
   }
 
   if (token.startsWith("Loser ")) {
     const order = Number(token.replace("Loser ", ""));
     const match = matches.find((m) => m.order_index === order);
 
-    if (!match || !match.is_finished || match.home_score === null || match.away_score === null) {
+    if (
+      !match ||
+      !match.is_finished ||
+      match.home_score === null ||
+      match.away_score === null
+    ) {
       return `Perdantă Meciul ${order}`;
     }
 
     const label = resolveLabel(match, matches, standings);
-    return match.home_score < match.away_score ? label.home : label.away;
+
+    if (match.home_score < match.away_score) return label.home;
+    if (match.away_score < match.home_score) return label.away;
+
+    return `Perdantă Meciul ${order}`;
   }
 
   return token;
 }
 
-function resolveTeam(token: string, matches: Match[], standings: Record<string, Standing[]>) {
-  const byGroup = resolveGroupToken(token, standings);
-  if (byGroup !== token) return byGroup;
+function resolveTeam(
+  token: string,
+  matches: Match[],
+  standings: Record<string, Standing[]>
+) {
+  const groupResolved = resolveGroupToken(token, standings);
+  if (groupResolved !== token) return groupResolved;
 
   return resolveWinnerOrLoser(token, matches, standings);
 }
 
-function resolveLabel(match: Match, matches: Match[], standings: Record<string, Standing[]>) {
+function resolveLabel(
+  match: Match,
+  matches: Match[],
+  standings: Record<string, Standing[]>
+) {
   if (match.stage === "third") {
     return {
       home: resolveTeam("Loser 101", matches, standings),
       away: resolveTeam("Loser 102", matches, standings),
-      subtitle: "Meciul 103",
+      subtitle: `Meciul ${match.order_index}`,
     };
   }
 
@@ -190,7 +136,7 @@ function resolveLabel(match: Match, matches: Match[], standings: Record<string, 
     return {
       home: resolveTeam("Winner 101", matches, standings),
       away: resolveTeam("Winner 102", matches, standings),
-      subtitle: "Meciul 104",
+      subtitle: `Meciul ${match.order_index}`,
     };
   }
 
@@ -234,10 +180,22 @@ export default function PredictionsKnockoutPage() {
 
       setUserId(user.id);
 
-      const validStages = ["groups", "round32", "round16", "quarter", "semi", "third", "final"];
+      const validStages = [
+        "groups",
+        "round32",
+        "round16",
+        "quarter",
+        "semi",
+        "third",
+        "final",
+      ];
 
       const [matchRes, predRes] = await Promise.all([
-        supabase.from("matches").select("*").in("stage", validStages).order("order_index", { ascending: true }),
+        supabase
+          .from("matches")
+          .select("*")
+          .in("stage", validStages)
+          .order("order_index", { ascending: true }),
         supabase
           .from("predictions")
           .select("match_id, predicted_home, predicted_away")
@@ -272,14 +230,17 @@ export default function PredictionsKnockoutPage() {
 
   useEffect(() => {
     if (!activePhase) return;
-    if (KNOCKOUT_STAGES.some((s) => s.key === activePhase)) {
+
+    if (KNOCKOUT_STAGES.some((stage) => stage.key === activePhase)) {
       setFilterStage(activePhase);
     }
   }, [activePhase]);
 
   function isStageLocked(stage: string) {
     if (!activePhase) return true;
-    if (["groups1", "groups2", "groups3", "closed"].includes(activePhase)) return true;
+    if (["groups1", "groups2", "groups3", "closed"].includes(activePhase)) {
+      return true;
+    }
     return activePhase !== stage;
   }
 
@@ -346,10 +307,15 @@ export default function PredictionsKnockoutPage() {
     showToast("Pronosticul a fost șters.");
   }
 
-  const knockoutMatches = matches.filter((m) => m.stage !== "groups");
-  const filteredMatches = knockoutMatches.filter((m) => m.stage === filterStage);
+  const knockoutMatches = matches.filter((match) => match.stage !== "groups");
+  const filteredMatches = knockoutMatches.filter(
+    (match) => match.stage === filterStage
+  );
+
   const currentStageLocked = isStageLocked(filterStage);
-  const currentStageInfo = KNOCKOUT_STAGES.find((s) => s.key === filterStage);
+  const currentStageInfo = KNOCKOUT_STAGES.find(
+    (stage) => stage.key === filterStage
+  );
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
@@ -362,7 +328,7 @@ export default function PredictionsKnockoutPage() {
       <div className="relative h-40 overflow-hidden">
         <img
           src="/images/pronosticuri.jpeg"
-          alt="Pronosticuri Eliminatorii"
+          alt="Pronosticuri Faze Eliminatorii"
           className="h-full w-full object-cover object-center"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-gray-950" />
@@ -415,7 +381,9 @@ export default function PredictionsKnockoutPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-white/50">Se încarcă meciurile...</div>
+          <div className="py-12 text-center text-white/50">
+            Se încarcă meciurile...
+          </div>
         ) : filteredMatches.length === 0 ? (
           <div className="py-12 text-center text-white/50">
             Nu există meciuri pentru această rundă.
@@ -436,7 +404,9 @@ export default function PredictionsKnockoutPage() {
                   }`}
                 >
                   <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-3 py-1.5">
-                    <span className="text-xs text-white/40">{labels.subtitle}</span>
+                    <span className="text-xs text-white/40">
+                      {labels.subtitle}
+                    </span>
 
                     {match.is_finished &&
                       match.home_score !== null &&
@@ -449,7 +419,9 @@ export default function PredictionsKnockoutPage() {
 
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 text-right">
-                      <span className="text-sm font-semibold text-white">{labels.home}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {labels.home}
+                      </span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -495,7 +467,9 @@ export default function PredictionsKnockoutPage() {
                     </div>
 
                     <div className="flex-1">
-                      <span className="text-sm font-semibold text-white">{labels.away}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {labels.away}
+                      </span>
                     </div>
 
                     {!locked && (
@@ -509,7 +483,11 @@ export default function PredictionsKnockoutPage() {
                               : "bg-amber-500 text-black hover:bg-amber-400"
                           } disabled:opacity-50`}
                         >
-                          {saving === match.id ? "..." : wasSaved ? "✓ Salvat" : "Salvează"}
+                          {saving === match.id
+                            ? "..."
+                            : wasSaved
+                            ? "✓ Salvat"
+                            : "Salvează"}
                         </button>
 
                         <button
@@ -530,3 +508,108 @@ export default function PredictionsKnockoutPage() {
     </div>
   );
 }
+import { useRouter } from "next/navigation";
+import { useActivePhase } from "@/lib/useActivePhase";
+
+type Match = {
+  id: string;
+  stage: string;
+  group_name: string | null;
+  matchday: number | null;
+  order_index: number;
+  home_team: string;
+  away_team: string;
+  home_score: number | null;
+  away_score: number | null;
+  is_finished: boolean;
+};
+
+type PredictionMap = Record<string, { home: string; away: string }>;
+
+type Standing = {
+  team: string;
+  group: string;
+  pts: number;
+  gf: number;
+  ga: number;
+  gd: number;
+  wins: number;
+};
+
+const KNOCKOUT_STAGES = [
+  { key: "round32", label: "Șaisprezecimi" },
+  { key: "round16", label: "Optimi de finală" },
+  { key: "quarter", label: "Sferturi de finală" },
+  { key: "semi", label: "Semifinale" },
+  { key: "third", label: "Finala mică" },
+  { key: "final", label: "Finala" },
+];
+
+const STAGE_TITLES: Record<string, string> = {
+  round32: "Șaisprezecimi",
+  round16: "Optimi de finală",
+  quarter: "Sferturi de finală",
+  semi: "Semifinale",
+  third: "Finala mică",
+  final: "Finala",
+};
+
+function emptyStanding(team: string, group: string): Standing {
+  return {
+    team,
+    group,
+    pts: 0,
+    gf: 0,
+    ga: 0,
+    gd: 0,
+    wins: 0,
+  };
+}
+
+function addResult(row: Standing, gf: number, ga: number) {
+  row.gf += gf;
+  row.ga += ga;
+  row.gd += gf - ga;
+
+  if (gf > ga) {
+    row.pts += 3;
+    row.wins += 1;
+  } else if (gf === ga) {
+    row.pts += 1;
+  }
+}
+
+function buildStandings(matches: Match[]) {
+  const standings: Record<string, Standing[]> = {};
+
+  matches
+    .filter((m) => m.stage === "groups" && m.group_name)
+    .forEach((m) => {
+      const group = m.group_name as string;
+
+      standings[group] ??= [];
+
+      if (!standings[group].some((t) => t.team === m.home_team)) {
+        standings[group].push(emptyStanding(m.home_team, group));
+      }
+
+      if (!standings[group].some((t) => t.team === m.away_team)) {
+        standings[group].push(emptyStanding(m.away_team, group));
+      }
+    });
+
+  matches
+    .filter(
+      (m) =>
+        m.stage === "groups" &&
+        m.group_name &&
+        m.is_finished &&
+        m.home_score !== null &&
+        m.away_score !== null
+    )
+    .forEach((m) => {
+      const group = m.group_name as string;
+
+      const home = standings[group]?.find((t) => t.team === m.home_team);
+      const away = standings[group]?.find((t) => t.team === m.away_team);
+
