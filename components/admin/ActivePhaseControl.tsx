@@ -1,6 +1,47 @@
 "use client";
 
-import { ActivePhase, PHASE_LABELS, useActivePhase } from "@/lib/useActivePhase";
+import { ActivePhase, PHASE_LABELS, useActivePhase } from-medium text-green-400">import { ActivePhase, PHASE_LABELS, useActivePhase } from "@/lib/useActivePhase";
+            Activ acum: {PHASE_LABELS[activePhase]}
+          </span>
+        )}
+      </div>
+
+      <p className="text-sm text-white/60">
+        Apasă un buton pentru a deschide sau închide o etapă. Modificarea se
+        aplică instant pentru toți userii.
+      </p>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {PHASE_ORDER.map((phase) => {
+          const isActive = activePhase === phase;
+
+          return (
+            <button
+              key={phase}
+              onClick={() => setActivePhase(phase)}
+              className={`
+                relative rounded-lg px-3 py-2.5 text-sm font-medium text-white
+                transition-all duration-150
+                ${PHASE_COLORS[phase]}
+                ${
+                  isActive
+                    ? "scale-105 shadow-lg ring-2 ring-white/40"
+                    : "opacity-60 hover:opacity-100"
+                }
+              `}
+            >
+              {isActive && (
+                <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-gray-900 bg-green-400" />
+              )}
+              {PHASE_LABELS[phase]}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 
 const PHASE_ORDER: ActivePhase[] = [
   "groups1",
@@ -50,42 +91,8 @@ export default function ActivePhaseControl() {
   return (
     <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold text-white">Control Etapă Activă</h2>
+        <h2 className="text-lg font-semibold text-white">
+          Control Etapă Activă
+        </h2>
 
         {activePhase && (
-          <span className="rounded-full border border-green-500/30 bg-green-600/20 px-3 py-1 text-xs font-medium text-green-400">
-            Activ acum: {PHASE_LABELS[activePhase]}
-          </span>
-        )}
-      </div>
-
-      <p className="text-sm text-white/60">
-        Apasă un buton pentru a deschide sau închide o etapă. Modificarea se aplică instant pentru toți userii.
-      </p>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {PHASE_ORDER.map((phase) => {
-          const isActive = activePhase === phase;
-
-          return (
-            <button
-              key={phase}
-              onClick={() => setActivePhase(phase)}
-              className={`
-                relative rounded-lg px-3 py-2.5 text-sm font-medium text-white
-                transition-all duration-150
-                ${PHASE_COLORS[phase]}
-                ${isActive ? "scale-105 shadow-lg ring-2 ring-white/40" : "opacity-60 hover:opacity-100"}
-              `}
-            >
-              {isActive && (
-                <span className="absolute -right-1.5 -top-1.5 h-3 w-3 rounded-full border-2 border-gray-900 bg-green-400" />
-              )}
-              {PHASE_LABELS[phase]}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
