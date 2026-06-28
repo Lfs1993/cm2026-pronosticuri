@@ -1,310 +1,581 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
-import { useActivePhase } from '@/lib/useActivePhase'
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabase";
+import { useRouter } from "next/navigation";
+import { useActivePhase } from "@/lib/useActivePhase";
 
 type Match = {
-  id: string
-  stage: string
-  order_index: number
-  home_team: string
-  away_team: string
-  home_score: number | null
-  away_score: number | null
-  is_finished: boolean
-}
+  id: string;
+  stage: string;
+  order_index: number;
+  home_team: string;
+  away_team: string;
+  home_score: number | null;
+  away_score: number | null;
+  is_finished: boolean;
+};
 
-type PredictionMap = Record<string, { home: string; away: string }>
+type PredictionMap = Record<string, { home: string; away: string }>;
 
 const KNOCKOUT_STAGES = [
-  { key: 'round32', label: 'Saisprezecimi' },
-  { key: 'round16', label: 'Optimi de finală' },
-  { key: 'quarter', label: 'Sferturi de finală' },
-  { key: 'semi',    label: 'Semifinale' },
-  { key: 'third',   label: 'Finala mică' },
-  { key: 'final',   label: 'Finala' },
-]
+  { key: "round32", label: "Șaisprezecimi" },
+  { key: "round16", label: "Optimi de finală" },
+  { key: "quarter", label: "Sferturi de finală" },
+  { key: "semi", label: "Semifinale" },
+  { key: "third", label: "Finala mică" },
+  { key: "final", label: "Finala" },
+];
 
-// Saisprezecimi reale CM 2026 (în ordine cronologică)
-const ROUND32_LABELS: Record<number, { home: string; away: string; date: string; stadium: string }> = {
-  1:  { home: 'South Africa',  away: 'Canada',             date: '28 Iun',  stadium: 'Los Angeles' },
-  2:  { home: 'Brazil',        away: 'Japan',              date: '29 Iun',  stadium: 'Houston' },
-  3:  { home: 'Germany',       away: 'Paraguay',           date: '29 Iun',  stadium: 'Boston' },
-  4:  { home: 'Netherlands',   away: 'Morocco',            date: '29 Iun',  stadium: 'Monterrey' },
-  5:  { home: 'Ivory Coast',   away: 'Norway',             date: '30 Iun',  stadium: 'Dallas' },
-  6:  { home: 'France',        away: 'Sweden',             date: '30 Iun',  stadium: 'New York/NJ' },
-  7:  { home: 'Mexico',        away: 'Ecuador',            date: '30 Iun',  stadium: 'Mexico City' },
-  8:  { home: 'USA',           away: 'Bosnia and Herzegovina', date: '1 Iul', stadium: 'San Francisco' },
-  9:  { home: 'Belgium',       away: 'Senegal',            date: '1 Iul',   stadium: 'Seattle' },
-  10: { home: 'England',       away: 'DR Congo',           date: '1 Iul',   stadium: 'Atlanta' },
-  11: { home: 'Colombia',      away: 'Croatia',            date: '2 Iul',   stadium: 'Kansas City' },
-  12: { home: 'Spain',         away: 'Austria',            date: '2 Iul',   stadium: 'Los Angeles' },
-  13: { home: 'Switzerland',   away: 'Algeria',            date: '2 Iul',   stadium: 'Vancouver' },
-  14: { home: 'Argentina',     away: 'Cabo Verde',         date: '3 Iul',   stadium: 'Miami' },
-  15: { home: 'Australia',     away: 'Egypt',              date: '3 Iul',   stadium: 'Dallas' },
-  16: { home: 'Portugal',      away: 'Ghana',              date: '3 Iul',   stadium: 'Toronto' },
-}
+const ROUND32_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
+  73: {
+    home: "Locul 2 Grupa A",
+    away: "Locul 2 Grupa B",
+    subtitle: "Meciul 73 · 28 iunie · Los Angeles",
+  },
+  74: {
+    home: "Locul 1 Grupa E",
+    away: "Locul 3 din A/B/C/D/F",
+    subtitle: "Meciul 74 · 29 iunie · Boston",
+  },
+  75: {
+    home: "Locul 1 Grupa F",
+    away: "Locul 2 Grupa C",
+    subtitle: "Meciul 75 · 29 iunie · Monterrey",
+  },
+  76: {
+    home: "Locul 1 Grupa C",
+    away: "Locul 2 Grupa F",
+    subtitle: "Meciul 76 · 29 iunie · Houston",
+  },
+  77: {
+    home: "Locul 1 Grupa I",
+    away: "Locul 3 din C/D/F/G/H",
+    subtitle: "Meciul 77 · 30 iunie · New York/New Jersey",
+  },
+  78: {
+    home: "Locul 2 Grupa E",
+    away: "Locul 2 Grupa I",
+    subtitle: "Meciul 78 · 30 iunie · Dallas",
+  },
+  79: {
+    home: "Locul 1 Grupa A",
+    away: "Locul 3 din C/E/F/H/I",
+    subtitle: "Meciul 79 · 30 iunie · Mexico City",
+  },
+  80: {
+    home: "Locul 1 Grupa L",
+    away: "Locul 3 din E/H/I/J/K",
+    subtitle: "Meciul 80 · 1 iulie · Atlanta",
+  },
+  81: {
+    home: "Locul 1 Grupa D",
+    away: "Locul 3 din B/E/F/I/J",
+    subtitle: "Meciul 81 · 1 iulie · San Francisco Bay Area",
+  },
+  82: {
+    home: "Locul 1 Grupa G",
+    away: "Locul 3 din A/E/H/I/J",
+    subtitle: "Meciul 82 · 1 iulie · Seattle",
+  },
+  83: {
+    home: "Locul 2 Grupa K",
+    away: "Locul 2 Grupa L",
+    subtitle: "Meciul 83 · 2 iulie · Toronto",
+  },
+  84: {
+    home: "Locul 1 Grupa H",
+    away: "Locul 2 Grupa J",
+    subtitle: "Meciul 84 · 2 iulie · Los Angeles",
+  },
+  85: {
+    home: "Locul 1 Grupa B",
+    away: "Locul 3 din E/F/G/I/J",
+    subtitle: "Meciul 85 · 2 iulie · Vancouver",
+  },
+  86: {
+    home: "Locul 1 Grupa J",
+    away: "Locul 2 Grupa H",
+    subtitle: "Meciul 86 · 3 iulie · Miami",
+  },
+  87: {
+    home: "Locul 1 Grupa K",
+    away: "Locul 3 din D/E/I/J/L",
+    subtitle: "Meciul 87 · 3 iulie · Kansas City",
+  },
+  88: {
+    home: "Locul 2 Grupa D",
+    away: "Locul 2 Grupa G",
+    subtitle: "Meciul 88 · 3 iulie · Dallas",
+  },
+};
 
-// Optimi — câștigătorii saisprezecimilor
-const ROUND16_LABELS: Record<number, { home: string; away: string }> = {
-  1: { home: 'Câșt. M73 (S.Africa/Canada)',   away: 'Câșt. M76 (Brazil/Japan)'     },
-  2: { home: 'Câșt. M74 (Germany/Paraguay)',  away: 'Câșt. M75 (Netherlands/Morocco)' },
-  3: { home: 'Câșt. M78 (IvoryCoast/Norway)', away: 'Câșt. M77 (France/Sweden)'    },
-  4: { home: 'Câșt. M79 (Mexico/Ecuador)',    away: 'Câșt. M81 (USA/Bosnia)'        },
-  5: { home: 'Câșt. M82 (Belgium/Senegal)',   away: 'Câșt. M80 (England/DRCongo)'   },
-  6: { home: 'Câșt. M84 (Spain/Austria)',     away: 'Câșt. M83 (Colombia/Croatia)'  },
-  7: { home: 'Câșt. M85 (Switzerland/Algeria)', away: 'Câșt. M86 (Argentina/CaboVerde)' },
-  8: { home: 'Câșt. M87 (Australia/Egypt)',   away: 'Câșt. M88 (Portugal/Ghana)'    },
-}
+const ROUND16_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
+  89: {
+    home: "Câștigătoare Meciul 74",
+    away: "Câștigătoare Meciul 77",
+    subtitle: "Meciul 89 · Optimi",
+  },
+  90: {
+    home: "Câștigătoare Meciul 73",
+    away: "Câștigătoare Meciul 75",
+    subtitle: "Meciul 90 · Optimi",
+  },
+  91: {
+    home: "Câștigătoare Meciul 76",
+    away: "Câștigătoare Meciul 78",
+    subtitle: "Meciul 91 · Optimi",
+  },
+  92: {
+    home: "Câștigătoare Meciul 79",
+    away: "Câștigătoare Meciul 80",
+    subtitle: "Meciul 92 · Optimi",
+  },
+  93: {
+    home: "Câștigătoare Meciul 83",
+    away: "Câștigătoare Meciul 84",
+    subtitle: "Meciul 93 · Optimi",
+  },
+  94: {
+    home: "Câștigătoare Meciul 81",
+    away: "Câștigătoare Meciul 82",
+    subtitle: "Meciul 94 · Optimi",
+  },
+  95: {
+    home: "Câștigătoare Meciul 86",
+    away: "Câștigătoare Meciul 88",
+    subtitle: "Meciul 95 · Optimi",
+  },
+  96: {
+    home: "Câștigătoare Meciul 85",
+    away: "Câștigătoare Meciul 87",
+    subtitle: "Meciul 96 · Optimi",
+  },
+};
 
-// Sferturi
-const QUARTER_LABELS: Record<number, { home: string; away: string }> = {
-  1: { home: 'Câșt. Optimi 1', away: 'Câșt. Optimi 2' },
-  2: { home: 'Câșt. Optimi 3', away: 'Câșt. Optimi 4' },
-  3: { home: 'Câșt. Optimi 5', away: 'Câșt. Optimi 6' },
-  4: { home: 'Câșt. Optimi 7', away: 'Câșt. Optimi 8' },
-}
+const QUARTER_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
+  97: {
+    home: "Câștigătoare Meciul 89",
+    away: "Câștigătoare Meciul 90",
+    subtitle: "Meciul 97 · Sferturi",
+  },
+  98: {
+    home: "Câștigătoare Meciul 93",
+    away: "Câștigătoare Meciul 94",
+    subtitle: "Meciul 98 · Sferturi",
+  },
+  99: {
+    home: "Câștigătoare Meciul 91",
+    away: "Câștigătoare Meciul 92",
+    subtitle: "Meciul 99 · Sferturi",
+  },
+  100: {
+    home: "Câștigătoare Meciul 95",
+    away: "Câștigătoare Meciul 96",
+    subtitle: "Meciul 100 · Sferturi",
+  },
+};
 
-// Semifinale
-const SEMI_LABELS: Record<number, { home: string; away: string }> = {
-  1: { home: 'Câșt. Sfert 1', away: 'Câșt. Sfert 2' },
-  2: { home: 'Câșt. Sfert 3', away: 'Câșt. Sfert 4' },
-}
+const SEMI_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
+  101: {
+    home: "Câștigătoare Meciul 97",
+    away: "Câștigătoare Meciul 98",
+    subtitle: "Meciul 101 · Semifinală",
+  },
+  102: {
+    home: "Câștigătoare Meciul 99",
+    away: "Câștigătoare Meciul 100",
+    subtitle: "Meciul 102 · Semifinală",
+  },
+};
 
-function getMatchLabel(stage: string, index: number, homeTeam: string, awayTeam: string): { home: string; away: string; subtitle?: string } {
-  const isReal = (t: string) => t && t !== 'TBD' && !t.startsWith('Winner') && !t.startsWith('W ')
-  if (isReal(homeTeam) && isReal(awayTeam)) {
-    return { home: homeTeam, away: awayTeam }
+function getMatchLabel(match: Match): { home: string; away: string; subtitle: string } {
+  const order = match.order_index;
+
+  if (match.stage === "round32" && ROUND32_LABELS[order]) {
+    return ROUND32_LABELS[order];
   }
 
-  const i = index + 1
-
-  if (stage === 'round32' && ROUND32_LABELS[i]) {
-    const r = ROUND32_LABELS[i]
-    return { home: r.home, away: r.away, subtitle: `${r.date} · ${r.stadium}` }
+  if (match.stage === "round16" && ROUND16_LABELS[order]) {
+    return ROUND16_LABELS[order];
   }
-  if (stage === 'round16' && ROUND16_LABELS[i]) return ROUND16_LABELS[i]
-  if (stage === 'quarter' && QUARTER_LABELS[i]) return QUARTER_LABELS[i]
-  if (stage === 'semi' && SEMI_LABELS[i]) return SEMI_LABELS[i]
-  if (stage === 'third') return { home: 'Perdant Semifinală 1', away: 'Perdant Semifinală 2' }
-  if (stage === 'final') return { home: 'Câșt. Semifinală 1', away: 'Câșt. Semifinală 2' }
 
-  return { home: homeTeam || 'TBD', away: awayTeam || 'TBD' }
+  if (match.stage === "quarter" && QUARTER_LABELS[order]) {
+    return QUARTER_LABELS[order];
+  }
+
+  if (match.stage === "semi" && SEMI_LABELS[order]) {
+    return SEMI_LABELS[order];
+  }
+
+  if (match.stage === "third") {
+    return {
+      home: "Perdanta Semifinalei 1",
+      away: "Perdanta Semifinalei 2",
+      subtitle: "Meciul 103 · Finala mică",
+    };
+  }
+
+  if (match.stage === "final") {
+    return {
+      home: "Câștigătoare Semifinala 1",
+      away: "Câștigătoare Semifinala 2",
+      subtitle: "Meciul 104 · Finala",
+    };
+  }
+
+  return {
+    home: match.home_team || "TBD",
+    away: match.away_team || "TBD",
+    subtitle: `Meciul ${order}`,
+  };
 }
 
 export default function PredictionsKnockoutPage() {
-  const router = useRouter()
-  const { activePhase, loading: phaseLoading } = useActivePhase()
+  const router = useRouter();
+  const { activePhase, loading: phaseLoading } = useActivePhase();
 
-  const [userId, setUserId] = useState<string | null>(null)
-  const [matches, setMatches] = useState<Match[]>([])
-  const [predictions, setPredictions] = useState<PredictionMap>({})
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState<string | null>(null)
-  const [saved, setSaved] = useState<Record<string, boolean>>({})
-  const [filterStage, setFilterStage] = useState<string>('round32')
+  const [userId, setUserId] = useState<string | null>(null);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [predictions, setPredictions] = useState<PredictionMap>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [saved, setSaved] = useState<Record<string, boolean>>({});
+  const [filterStage, setFilterStage] = useState<string>("round32");
+  const [toast, setToast] = useState<string | null>(null);
+
+  function showToast(message: string) {
+    setToast(message);
+    setTimeout(() => setToast(null), 2500);
+  }
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
-      setUserId(user.id)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      const validStages = KNOCKOUT_STAGES.map(s => s.key)
-
-      const [matchRes, predRes] = await Promise.all([
-        supabase.from('matches').select('*').in('stage', validStages).order('order_index'),
-        supabase.from('predictions').select('match_id, predicted_home, predicted_away').eq('user_id', user.id),
-      ])
-
-      if (matchRes.data) setMatches(matchRes.data)
-
-      if (predRes.data) {
-        const map: PredictionMap = {}
-        predRes.data.forEach((p: { match_id: string; predicted_home: number; predicted_away: number }) => {
-          map[p.match_id] = { home: p.predicted_home.toString(), away: p.predicted_away.toString() }
-        })
-        setPredictions(map)
+      if (!user) {
+        router.push("/");
+        return;
       }
 
-      setLoading(false)
+      setUserId(user.id);
+
+      const validStages = KNOCKOUT_STAGES.map((stage) => stage.key);
+
+      const [matchRes, predRes] = await Promise.all([
+        supabase
+          .from("matches")
+          .select("*")
+          .in("stage", validStages)
+          .order("order_index", { ascending: true }),
+        supabase
+          .from("predictions")
+          .select("match_id, predicted_home, predicted_away")
+          .eq("user_id", user.id),
+      ]);
+
+      if (matchRes.data) {
+        setMatches(matchRes.data as Match[]);
+      }
+
+      if (predRes.data) {
+        const map: PredictionMap = {};
+        const savedMap: Record<string, boolean> = {};
+
+        predRes.data.forEach(
+          (prediction: {
+            match_id: string;
+            predicted_home: number;
+            predicted_away: number;
+          }) => {
+            map[prediction.match_id] = {
+              home: prediction.predicted_home.toString(),
+              away: prediction.predicted_away.toString(),
+            };
+            savedMap[prediction.match_id] = true;
+          }
+        );
+
+        setPredictions(map);
+        setSaved(savedMap);
+      }
+
+      setLoading(false);
     }
-    init()
-  }, [])
+
+    init();
+  }, [router]);
 
   useEffect(() => {
-    if (!activePhase) return
-    const exists = KNOCKOUT_STAGES.find(s => s.key === activePhase)
-    if (exists) setFilterStage(activePhase)
-  }, [activePhase])
+    if (!activePhase) return;
+
+    const exists = KNOCKOUT_STAGES.find((stage) => stage.key === activePhase);
+    if (exists) setFilterStage(activePhase);
+  }, [activePhase]);
 
   function isStageLocked(stageKey: string): boolean {
-    if (!activePhase) return true
-    if (['groups1', 'groups2', 'groups3', 'closed'].includes(activePhase)) return true
-    return activePhase !== stageKey
+    if (!activePhase) return true;
+    if (["groups1", "groups2", "groups3", "closed"].includes(activePhase)) return true;
+    return activePhase !== stageKey;
   }
 
   async function savePrediction(matchId: string) {
-    if (!userId) return
-    const pred = predictions[matchId]
-    if (!pred) return
-    const home = parseInt(pred.home)
-    const away = parseInt(pred.away)
+    if (!userId) return;
+
+    const pred = predictions[matchId];
+    if (!pred) return;
+
+    const home = parseInt(pred.home, 10);
+    const away = parseInt(pred.away, 10);
+
     if (isNaN(home) || isNaN(away) || home < 0 || away < 0) {
-      alert('Introduceți scoruri valide!')
-      return
+      showToast("Introduceți scoruri valide.");
+      return;
     }
-    setSaving(matchId)
-    const { error } = await supabase
-      .from('predictions')
-      .upsert(
-        { user_id: userId, match_id: matchId, predicted_home: home, predicted_away: away },
-        { onConflict: 'user_id,match_id' }
-      )
-    if (error) alert(`Eroare: ${error.message}`)
-    else setSaved(prev => ({ ...prev, [matchId]: true }))
-    setSaving(null)
+
+    setSaving(matchId);
+
+    const { error } = await supabase.from("predictions").upsert(
+      {
+        user_id: userId,
+        match_id: matchId,
+        predicted_home: home,
+        predicted_away: away,
+      },
+      { onConflict: "user_id,match_id" }
+    );
+
+    if (error) {
+      showToast(`Eroare: ${error.message}`);
+    } else {
+      setSaved((prev) => ({ ...prev, [matchId]: true }));
+      showToast("Prediction saved");
+    }
+
+    setSaving(null);
   }
 
-  const currentStageInfo = KNOCKOUT_STAGES.find(s => s.key === filterStage)
-  const filteredMatches = matches.filter(m => m.stage === filterStage)
-  const currentStageLocked = isStageLocked(filterStage)
+  async function deletePrediction(matchId: string) {
+    if (!userId) return;
+
+    const { error } = await supabase
+      .from("predictions")
+      .delete()
+      .eq("user_id", userId)
+      .eq("match_id", matchId);
+
+    if (error) {
+      showToast(`Eroare la ștergere: ${error.message}`);
+      return;
+    }
+
+    setPredictions((prev) => ({
+      ...prev,
+      [matchId]: { home: "", away: "" },
+    }));
+
+    setSaved((prev) => ({
+      ...prev,
+      [matchId]: false,
+    }));
+
+    showToast("Pronosticul a fost șters.");
+  }
+
+  const currentStageInfo = KNOCKOUT_STAGES.find((stage) => stage.key === filterStage);
+  const filteredMatches = useMemo(
+    () => matches.filter((match) => match.stage === filterStage),
+    [matches, filterStage]
+  );
+  const currentStageLocked = isStageLocked(filterStage);
 
   return (
     <div className="min-h-screen bg-gray-950 text-white">
+      {toast && (
+        <div className="fixed right-4 top-4 z-50 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100 backdrop-blur">
+          {toast}
+        </div>
+      )}
 
-      {/* Banner */}
       <div className="relative h-40 overflow-hidden">
-        <img src="/images/pronosticuri.jpeg" alt="Pronosticuri Eliminatorii"
-          className="h-full w-full object-cover object-center" />
+        <img
+          src="/images/pronosticuri.jpeg"
+          alt="Pronosticuri Eliminatorii"
+          className="h-full w-full object-cover object-center"
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 to-gray-950" />
+
         <div className="absolute inset-0 flex items-center justify-center">
           <h1 className="text-3xl font-bold tracking-tight text-white drop-shadow-lg">
             Pronosticuri Faze Eliminatorii
           </h1>
-          <Link href="/groups"
-            className="absolute left-4 bottom-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white">
+
+          <Link
+            href="/groups"
+            className="absolute bottom-4 left-4 rounded-full border border-white/20 bg-black/40 px-4 py-1.5 text-sm text-white/80 backdrop-blur-sm transition-all hover:bg-black/60 hover:text-white"
+          >
             ← Înapoi
           </Link>
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-6 space-y-6">
-
-        {/* Filtre */}
-        <div className="rounded-xl border border-white/10 bg-white/5 p-4 space-y-3">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+        <div className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
           {!phaseLoading && (
-            <div className={`rounded-lg px-3 py-2 text-sm ${
-              currentStageLocked
-                ? 'bg-red-500/10 border border-red-500/20 text-red-400'
-                : 'bg-green-500/10 border border-green-500/20 text-green-400'
-            }`}>
+            <div
+              className={`rounded-lg border px-3 py-2 text-sm ${
+                currentStageLocked
+                  ? "border-red-500/20 bg-red-500/10 text-red-400"
+                  : "border-green-500/20 bg-green-500/10 text-green-400"
+              }`}
+            >
               {currentStageLocked
                 ? `🔒 ${currentStageInfo?.label ?? filterStage} este închisă pentru pronosticuri.`
                 : `✅ ${currentStageInfo?.label ?? filterStage} este deschisă – poți introduce pronosticuri!`}
             </div>
           )}
+
           <div className="flex flex-wrap gap-2">
-            {KNOCKOUT_STAGES.map(stage => (
-              <button key={stage.key} onClick={() => setFilterStage(stage.key)}
+            {KNOCKOUT_STAGES.map((stage) => (
+              <button
+                key={stage.key}
+                onClick={() => setFilterStage(stage.key)}
                 className={`rounded-full px-3 py-1 text-sm font-medium transition-all ${
-                  filterStage === stage.key ? 'bg-amber-500 text-black' : 'bg-white/10 text-white/70 hover:bg-white/20'
-                }`}>
+                  filterStage === stage.key
+                    ? "bg-amber-500 text-black"
+                    : "bg-white/10 text-white/70 hover:bg-white/20"
+                }`}
+              >
                 {stage.label}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Meciuri */}
         {loading ? (
-          <div className="text-center py-12 text-white/50">Se încarcă meciurile...</div>
+          <div className="py-12 text-center text-white/50">
+            Se încarcă meciurile...
+          </div>
         ) : filteredMatches.length === 0 ? (
-          // Dacă nu există meciuri în DB pentru această rundă, arătăm preview-ul
-          filterStage === 'round32' ? (
-            <div className="space-y-3">
-              <p className="text-xs text-white/40 text-center">Preview meciuri — pronosticurile se vor putea introduce când adminul deschide această etapă</p>
-              {Object.entries(ROUND32_LABELS).map(([idx, match]) => (
-                <div key={idx} className="rounded-xl border border-white/5 bg-white/5 overflow-hidden opacity-60">
-                  <div className="px-3 py-1.5 bg-white/5 border-b border-white/5">
-                    <span className="text-xs text-white/40">{match.date} · {match.stadium}</span>
-                  </div>
-                  <div className="flex items-center gap-3 px-4 py-3">
-                    <span className="flex-1 text-right font-semibold text-white text-sm">{match.home}</span>
-                    <span className="text-white/30 text-sm font-bold px-3">vs</span>
-                    <span className="flex-1 font-semibold text-white text-sm">{match.away}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-white/50">
-              Meciurile pentru această rundă nu au fost generate încă.
-            </div>
-          )
+          <div className="py-12 text-center text-white/50">
+            Meciurile pentru această rundă nu există încă în baza de date.
+          </div>
         ) : (
           <div className="space-y-3">
-            {filteredMatches.map((match, index) => {
-              const pred = predictions[match.id] ?? { home: '', away: '' }
-              const locked = currentStageLocked || match.is_finished
-              const wasSaved = saved[match.id]
-              const labels = getMatchLabel(match.stage, index, match.home_team, match.away_team)
+            {filteredMatches.map((match) => {
+              const pred = predictions[match.id] ?? { home: "", away: "" };
+              const locked = currentStageLocked || match.is_finished;
+              const wasSaved = saved[match.id];
+              const labels = getMatchLabel(match);
 
               return (
-                <div key={match.id}
-                  className={`rounded-xl border bg-white/5 overflow-hidden ${
-                    locked ? 'border-white/5 opacity-75' : 'border-white/10'
-                  }`}>
+                <div
+                  key={match.id}
+                  className={`overflow-hidden rounded-xl border bg-white/5 ${
+                    locked ? "border-white/5 opacity-75" : "border-white/10"
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b border-white/5 bg-white/5 px-3 py-1.5">
+                    <span className="text-xs text-white/40">{labels.subtitle}</span>
 
-                  <div className="px-3 py-1.5 bg-white/5 border-b border-white/5 flex items-center justify-between">
-                    <span className="text-xs text-white/40">
-                      {'subtitle' in labels && labels.subtitle
-                        ? labels.subtitle
-                        : `Meciul ${index + 1}`}
-                    </span>
-                    {match.is_finished && match.home_score !== null && (
-                      <span className="text-xs text-green-400">
-                        Rezultat: {match.home_score} – {match.away_score}
-                      </span>
-                    )}
+                    {match.is_finished &&
+                      match.home_score !== null &&
+                      match.away_score !== null && (
+                        <span className="text-xs text-green-400">
+                          Rezultat: {match.home_score} – {match.away_score}
+                        </span>
+                      )}
                   </div>
 
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 text-right">
-                      <span className="font-semibold text-white text-sm">{labels.home}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {labels.home}
+                      </span>
                     </div>
+
                     <div className="flex items-center gap-2">
-                      <input type="number" min={0} max={99} value={pred.home} disabled={locked}
-                        onChange={e => setPredictions(prev => ({ ...prev, [match.id]: { ...prev[match.id], home: e.target.value } }))}
-                        className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white focus:border-amber-500 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                        placeholder="–" />
+                      <input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={pred.home}
+                        disabled={locked}
+                        onChange={(event) =>
+                          setPredictions((prev) => ({
+                            ...prev,
+                            [match.id]: {
+                              ...(prev[match.id] ?? { home: "", away: "" }),
+                              home: event.target.value,
+                            },
+                          }))
+                        }
+                        className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                        placeholder="–"
+                      />
                       <span className="text-white/40">:</span>
-                      <input type="number" min={0} max={99} value={pred.away} disabled={locked}
-                        onChange={e => setPredictions(prev => ({ ...prev, [match.id]: { ...prev[match.id], away: e.target.value } }))}
-                        className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white focus:border-amber-500 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
-                        placeholder="–" />
+                      <input
+                        type="number"
+                        min={0}
+                        max={99}
+                        value={pred.away}
+                        disabled={locked}
+                        onChange={(event) =>
+                          setPredictions((prev) => ({
+                            ...prev,
+                            [match.id]: {
+                              ...(prev[match.id] ?? { home: "", away: "" }),
+                              away: event.target.value,
+                            },
+                          }))
+                        }
+                        className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+                        placeholder="–"
+                      />
                     </div>
+
                     <div className="flex-1">
-                      <span className="font-semibold text-white text-sm">{labels.away}</span>
+                      <span className="text-sm font-semibold text-white">
+                        {labels.away}
+                      </span>
                     </div>
+
                     {!locked && (
-                      <button onClick={() => savePrediction(match.id)} disabled={saving === match.id}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors shrink-0 ${
-                          wasSaved ? 'bg-green-600 text-white' : 'bg-amber-500 text-black hover:bg-amber-400'
-                        } disabled:opacity-50`}>
-                        {saving === match.id ? '...' : wasSaved ? '✓ Salvat' : 'Salvează'}
-                      </button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <button
+                          onClick={() => savePrediction(match.id)}
+                          disabled={saving === match.id}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+                            wasSaved
+                              ? "bg-green-600 text-white"
+                              : "bg-amber-500 text-black hover:bg-amber-400"
+                          } disabled:opacity-50`}
+                        >
+                          {saving === match.id
+                            ? "..."
+                            : wasSaved
+                            ? "✓ Salvat"
+                            : "Salvează"}
+                        </button>
+
+                        <button
+                          onClick={() => deletePrediction(match.id)}
+                          className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-500"
+                        >
+                          Șterge
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
-              )
+              );
             })}
           </div>
         )}
       </div>
     </div>
-  )
+  );
 }
