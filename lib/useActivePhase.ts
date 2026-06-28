@@ -43,6 +43,7 @@ export function useActivePhase() {
 
       if (error) {
         setError(error.message);
+        setActivePhaseState("closed");
       } else {
         setActivePhaseState((data?.active_phase ?? "closed") as ActivePhase);
       }
@@ -56,7 +57,11 @@ export function useActivePhase() {
       .channel("prediction_control_changes")
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "prediction_control" },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "prediction_control",
+        },
         (payload) => {
           setActivePhaseState(payload.new.active_phase as ActivePhase);
         }
@@ -86,5 +91,10 @@ export function useActivePhase() {
     return true;
   }
 
-  return { activePhase, loading, error, setActivePhase };
+  return {
+    activePhase,
+    loading,
+    error,
+    setActivePhase,
+  };
 }
