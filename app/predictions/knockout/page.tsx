@@ -5,17 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 import { useActivePhase } from "@/lib/useActivePhase";
+import { buildGroupStandings, resolveMatchLabel, ResolverMatch } from "@/lib/knockoutResolver";
 
-type Match = {
-  id: string;
-  stage: string;
-  order_index: number;
-  home_team: string;
-  away_team: string;
-  home_score: number | null;
-  away_score: number | null;
-  is_finished: boolean;
-};
+type Match = ResolverMatch;
 
 type PredictionMap = Record<string, { home: string; away: string }>;
 
@@ -27,210 +19,6 @@ const KNOCKOUT_STAGES = [
   { key: "third", label: "Finala mică" },
   { key: "final", label: "Finala" },
 ];
-
-const ROUND32_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
-  73: {
-    home: "Locul 2 Grupa A",
-    away: "Locul 2 Grupa B",
-    subtitle: "Meciul 73 · 28 iunie · Los Angeles",
-  },
-  74: {
-    home: "Locul 1 Grupa E",
-    away: "Locul 3 din A/B/C/D/F",
-    subtitle: "Meciul 74 · 29 iunie · Boston",
-  },
-  75: {
-    home: "Locul 1 Grupa F",
-    away: "Locul 2 Grupa C",
-    subtitle: "Meciul 75 · 29 iunie · Monterrey",
-  },
-  76: {
-    home: "Locul 1 Grupa C",
-    away: "Locul 2 Grupa F",
-    subtitle: "Meciul 76 · 29 iunie · Houston",
-  },
-  77: {
-    home: "Locul 1 Grupa I",
-    away: "Locul 3 din C/D/F/G/H",
-    subtitle: "Meciul 77 · 30 iunie · New York/New Jersey",
-  },
-  78: {
-    home: "Locul 2 Grupa E",
-    away: "Locul 2 Grupa I",
-    subtitle: "Meciul 78 · 30 iunie · Dallas",
-  },
-  79: {
-    home: "Locul 1 Grupa A",
-    away: "Locul 3 din C/E/F/H/I",
-    subtitle: "Meciul 79 · 30 iunie · Mexico City",
-  },
-  80: {
-    home: "Locul 1 Grupa L",
-    away: "Locul 3 din E/H/I/J/K",
-    subtitle: "Meciul 80 · 1 iulie · Atlanta",
-  },
-  81: {
-    home: "Locul 1 Grupa D",
-    away: "Locul 3 din B/E/F/I/J",
-    subtitle: "Meciul 81 · 1 iulie · San Francisco Bay Area",
-  },
-  82: {
-    home: "Locul 1 Grupa G",
-    away: "Locul 3 din A/E/H/I/J",
-    subtitle: "Meciul 82 · 1 iulie · Seattle",
-  },
-  83: {
-    home: "Locul 2 Grupa K",
-    away: "Locul 2 Grupa L",
-    subtitle: "Meciul 83 · 2 iulie · Toronto",
-  },
-  84: {
-    home: "Locul 1 Grupa H",
-    away: "Locul 2 Grupa J",
-    subtitle: "Meciul 84 · 2 iulie · Los Angeles",
-  },
-  85: {
-    home: "Locul 1 Grupa B",
-    away: "Locul 3 din E/F/G/I/J",
-    subtitle: "Meciul 85 · 2 iulie · Vancouver",
-  },
-  86: {
-    home: "Locul 1 Grupa J",
-    away: "Locul 2 Grupa H",
-    subtitle: "Meciul 86 · 3 iulie · Miami",
-  },
-  87: {
-    home: "Locul 1 Grupa K",
-    away: "Locul 3 din D/E/I/J/L",
-    subtitle: "Meciul 87 · 3 iulie · Kansas City",
-  },
-  88: {
-    home: "Locul 2 Grupa D",
-    away: "Locul 2 Grupa G",
-    subtitle: "Meciul 88 · 3 iulie · Dallas",
-  },
-};
-
-const ROUND16_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
-  89: {
-    home: "Câștigătoare Meciul 74",
-    away: "Câștigătoare Meciul 77",
-    subtitle: "Meciul 89 · Optimi",
-  },
-  90: {
-    home: "Câștigătoare Meciul 73",
-    away: "Câștigătoare Meciul 75",
-    subtitle: "Meciul 90 · Optimi",
-  },
-  91: {
-    home: "Câștigătoare Meciul 76",
-    away: "Câștigătoare Meciul 78",
-    subtitle: "Meciul 91 · Optimi",
-  },
-  92: {
-    home: "Câștigătoare Meciul 79",
-    away: "Câștigătoare Meciul 80",
-    subtitle: "Meciul 92 · Optimi",
-  },
-  93: {
-    home: "Câștigătoare Meciul 83",
-    away: "Câștigătoare Meciul 84",
-    subtitle: "Meciul 93 · Optimi",
-  },
-  94: {
-    home: "Câștigătoare Meciul 81",
-    away: "Câștigătoare Meciul 82",
-    subtitle: "Meciul 94 · Optimi",
-  },
-  95: {
-    home: "Câștigătoare Meciul 86",
-    away: "Câștigătoare Meciul 88",
-    subtitle: "Meciul 95 · Optimi",
-  },
-  96: {
-    home: "Câștigătoare Meciul 85",
-    away: "Câștigătoare Meciul 87",
-    subtitle: "Meciul 96 · Optimi",
-  },
-};
-
-const QUARTER_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
-  97: {
-    home: "Câștigătoare Meciul 89",
-    away: "Câștigătoare Meciul 90",
-    subtitle: "Meciul 97 · Sferturi",
-  },
-  98: {
-    home: "Câștigătoare Meciul 93",
-    away: "Câștigătoare Meciul 94",
-    subtitle: "Meciul 98 · Sferturi",
-  },
-  99: {
-    home: "Câștigătoare Meciul 91",
-    away: "Câștigătoare Meciul 92",
-    subtitle: "Meciul 99 · Sferturi",
-  },
-  100: {
-    home: "Câștigătoare Meciul 95",
-    away: "Câștigătoare Meciul 96",
-    subtitle: "Meciul 100 · Sferturi",
-  },
-};
-
-const SEMI_LABELS: Record<number, { home: string; away: string; subtitle: string }> = {
-  101: {
-    home: "Câștigătoare Meciul 97",
-    away: "Câștigătoare Meciul 98",
-    subtitle: "Meciul 101 · Semifinală",
-  },
-  102: {
-    home: "Câștigătoare Meciul 99",
-    away: "Câștigătoare Meciul 100",
-    subtitle: "Meciul 102 · Semifinală",
-  },
-};
-
-function getMatchLabel(match: Match): { home: string; away: string; subtitle: string } {
-  const order = match.order_index;
-
-  if (match.stage === "round32" && ROUND32_LABELS[order]) {
-    return ROUND32_LABELS[order];
-  }
-
-  if (match.stage === "round16" && ROUND16_LABELS[order]) {
-    return ROUND16_LABELS[order];
-  }
-
-  if (match.stage === "quarter" && QUARTER_LABELS[order]) {
-    return QUARTER_LABELS[order];
-  }
-
-  if (match.stage === "semi" && SEMI_LABELS[order]) {
-    return SEMI_LABELS[order];
-  }
-
-  if (match.stage === "third") {
-    return {
-      home: "Perdanta Semifinalei 1",
-      away: "Perdanta Semifinalei 2",
-      subtitle: "Meciul 103 · Finala mică",
-    };
-  }
-
-  if (match.stage === "final") {
-    return {
-      home: "Câștigătoare Semifinala 1",
-      away: "Câștigătoare Semifinala 2",
-      subtitle: "Meciul 104 · Finala",
-    };
-  }
-
-  return {
-    home: match.home_team || "TBD",
-    away: match.away_team || "TBD",
-    subtitle: `Meciul ${order}`,
-  };
-}
 
 export default function PredictionsKnockoutPage() {
   const router = useRouter();
@@ -263,14 +51,8 @@ export default function PredictionsKnockoutPage() {
 
       setUserId(user.id);
 
-      const validStages = KNOCKOUT_STAGES.map((stage) => stage.key);
-
       const [matchRes, predRes] = await Promise.all([
-        supabase
-          .from("matches")
-          .select("*")
-          .in("stage", validStages)
-          .order("order_index", { ascending: true }),
+        supabase.from("matches").select("*").order("order_index", { ascending: true }),
         supabase
           .from("predictions")
           .select("match_id, predicted_home, predicted_away")
@@ -385,11 +167,15 @@ export default function PredictionsKnockoutPage() {
     showToast("Pronosticul a fost șters.");
   }
 
+  const standings = useMemo(() => buildGroupStandings(matches), [matches]);
+
   const currentStageInfo = KNOCKOUT_STAGES.find((stage) => stage.key === filterStage);
+
   const filteredMatches = useMemo(
     () => matches.filter((match) => match.stage === filterStage),
     [matches, filterStage]
   );
+
   const currentStageLocked = isStageLocked(filterStage);
 
   return (
@@ -456,9 +242,7 @@ export default function PredictionsKnockoutPage() {
         </div>
 
         {loading ? (
-          <div className="py-12 text-center text-white/50">
-            Se încarcă meciurile...
-          </div>
+          <div className="py-12 text-center text-white/50">Se încarcă meciurile...</div>
         ) : filteredMatches.length === 0 ? (
           <div className="py-12 text-center text-white/50">
             Meciurile pentru această rundă nu există încă în baza de date.
@@ -469,7 +253,7 @@ export default function PredictionsKnockoutPage() {
               const pred = predictions[match.id] ?? { home: "", away: "" };
               const locked = currentStageLocked || match.is_finished;
               const wasSaved = saved[match.id];
-              const labels = getMatchLabel(match);
+              const labels = resolveMatchLabel(match, matches, standings);
 
               return (
                 <div
@@ -492,9 +276,7 @@ export default function PredictionsKnockoutPage() {
 
                   <div className="flex items-center gap-3 px-4 py-3">
                     <div className="flex-1 text-right">
-                      <span className="text-sm font-semibold text-white">
-                        {labels.home}
-                      </span>
+                      <span className="text-sm font-semibold text-white">{labels.home}</span>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -516,7 +298,9 @@ export default function PredictionsKnockoutPage() {
                         className="w-10 rounded-lg border border-white/20 bg-gray-900 px-1.5 py-1 text-center text-base font-bold text-white focus:border-amber-500 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
                         placeholder="–"
                       />
+
                       <span className="text-white/40">:</span>
+
                       <input
                         type="number"
                         min={0}
@@ -538,9 +322,7 @@ export default function PredictionsKnockoutPage() {
                     </div>
 
                     <div className="flex-1">
-                      <span className="text-sm font-semibold text-white">
-                        {labels.away}
-                      </span>
+                      <span className="text-sm font-semibold text-white">{labels.away}</span>
                     </div>
 
                     {!locked && (
@@ -554,11 +336,7 @@ export default function PredictionsKnockoutPage() {
                               : "bg-amber-500 text-black hover:bg-amber-400"
                           } disabled:opacity-50`}
                         >
-                          {saving === match.id
-                            ? "..."
-                            : wasSaved
-                            ? "✓ Salvat"
-                            : "Salvează"}
+                          {saving === match.id ? "..." : wasSaved ? "✓ Salvat" : "Salvează"}
                         </button>
 
                         <button
