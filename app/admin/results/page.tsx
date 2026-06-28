@@ -38,57 +38,57 @@ type UserPredictions = {
   predictions: Prediction[];
 };
 
-const TEAM_FLAGS: Record<string, string> = {
-  Mexico: "🇲🇽",
-  "South Africa": "🇿🇦",
-  "South Korea": "🇰🇷",
-  Czechia: "🇨🇿",
-  Canada: "🇨🇦",
-  "Bosnia and Herzegovina": "🇧🇦",
-  Qatar: "🇶🇦",
-  Switzerland: "🇨🇭",
-  Brazil: "🇧🇷",
-  Morocco: "🇲🇦",
-  Haiti: "🇭🇹",
-  Scotland: "🏴",
-  USA: "🇺🇸",
-  Paraguay: "🇵🇾",
-  Australia: "🇦🇺",
-  Türkiye: "🇹🇷",
-  Germany: "🇩🇪",
-  Curaçao: "🇨🇼",
-  "Côte d'Ivoire": "🇨🇮",
-  "Ivory Coast": "🇨🇮",
-  Ecuador: "🇪🇨",
-  Netherlands: "🇳🇱",
-  Japan: "🇯🇵",
-  Sweden: "🇸🇪",
-  Tunisia: "🇹🇳",
-  Belgium: "🇧🇪",
-  Egypt: "🇪🇬",
-  Iran: "🇮🇷",
-  "New Zealand": "🇳🇿",
-  Spain: "🇪🇸",
-  "Cabo Verde": "🇨🇻",
-  "Cape Verde": "🇨🇻",
-  "Saudi Arabia": "🇸🇦",
-  Uruguay: "🇺🇾",
-  France: "🇫🇷",
-  Senegal: "🇸🇳",
-  Iraq: "🇮🇶",
-  Norway: "🇳🇴",
-  Argentina: "🇦🇷",
-  Algeria: "🇩🇿",
-  Austria: "🇦🇹",
-  Jordan: "🇯🇴",
-  Portugal: "🇵🇹",
-  "DR Congo": "🇨🇩",
-  Uzbekistan: "🇺🇿",
-  Colombia: "🇨🇴",
-  England: "🏴",
-  Croatia: "🇭🇷",
-  Ghana: "🇬🇭",
-  Panama: "🇵🇦",
+const TEAM_FLAG_CODES: Record<string, string> = {
+  Mexico: "mx",
+  "South Africa": "za",
+  "South Korea": "kr",
+  Czechia: "cz",
+  Canada: "ca",
+  "Bosnia and Herzegovina": "ba",
+  Qatar: "qa",
+  Switzerland: "ch",
+  Brazil: "br",
+  Morocco: "ma",
+  Haiti: "ht",
+  Scotland: "gb-sct",
+  USA: "us",
+  Paraguay: "py",
+  Australia: "au",
+  Türkiye: "tr",
+  Germany: "de",
+  Curaçao: "cw",
+  "Côte d'Ivoire": "ci",
+  "Ivory Coast": "ci",
+  Ecuador: "ec",
+  Netherlands: "nl",
+  Japan: "jp",
+  Sweden: "se",
+  Tunisia: "tn",
+  Belgium: "be",
+  Egypt: "eg",
+  Iran: "ir",
+  "New Zealand": "nz",
+  Spain: "es",
+  "Cabo Verde": "cv",
+  "Cape Verde": "cv",
+  "Saudi Arabia": "sa",
+  Uruguay: "uy",
+  France: "fr",
+  Senegal: "sn",
+  Iraq: "iq",
+  Norway: "no",
+  Argentina: "ar",
+  Algeria: "dz",
+  Austria: "at",
+  Jordan: "jo",
+  Portugal: "pt",
+  "DR Congo": "cd",
+  Uzbekistan: "uz",
+  Colombia: "co",
+  England: "gb-eng",
+  Croatia: "hr",
+  Ghana: "gh",
+  Panama: "pa",
 };
 
 const STAGE_LABELS: Record<string, string> = {
@@ -103,19 +103,35 @@ const STAGE_LABELS: Record<string, string> = {
 
 const STAGE_ORDER = ["groups", "round32", "round16", "quarter", "semi", "third", "final"];
 
-function TeamName({ team, align = "left" }: { team: string; align?: "left" | "right" }) {
-  const flag = TEAM_FLAGS[team] ?? "";
+function TeamFlag({ team }: { team: string }) {
+  const code = TEAM_FLAG_CODES[team];
 
+  if (!code) return null;
+
+  return (
+    <img
+      src={`https://flagcdn.com/24x18/${code}.png`}
+      srcSet={`https://flagcdn.com/48x36/${code}.png 2x, https://flagcdn.com/72x54/${code}.png 3x`}
+      width="24"
+      height="18"
+      alt={`${team} flag`}
+      className="inline-block rounded-[2px] object-cover shadow-sm"
+      loading="lazy"
+    />
+  );
+}
+
+function TeamName({ team, align = "left" }: { team: string; align?: "left" | "right" }) {
   return (
     <span className={`inline-flex items-center gap-2 ${align === "right" ? "justify-end" : "justify-start"}`}>
       {align === "right" ? (
         <>
           <span>{team}</span>
-          {flag ? <span className="text-lg">{flag}</span> : null}
+          <TeamFlag team={team} />
         </>
       ) : (
         <>
-          {flag ? <span className="text-lg">{flag}</span> : null}
+          <TeamFlag team={team} />
           <span>{team}</span>
         </>
       )}
@@ -134,9 +150,15 @@ function calcPoints(pred: Prediction, match: Match): { pts: number; label: strin
   }
 
   const mw = h > a ? "home" : a > h ? "away" : "draw";
-  const pw = pred.predicted_home > pred.predicted_away ? "home" : pred.predicted_home < pred.predicted_away ? "away" : "draw";
+  const pw =
+    pred.predicted_home > pred.predicted_away
+      ? "home"
+      : pred.predicted_home < pred.predicted_away
+      ? "away"
+      : "draw";
 
   if (mw === pw) return { pts: 1, label: "🟡 1pt" };
+
   return { pts: 0, label: "❌ 0" };
 }
 
@@ -219,10 +241,17 @@ export default function AdminResultsPage() {
         profileMap[userProfile.id] = userProfile.display_name || "User";
       });
 
-      const predsWithProfiles = predRes.data.map((prediction: { user_id: string; match_id: string; predicted_home: number; predicted_away: number }) => ({
-        ...prediction,
-        profiles: [{ display_name: profileMap[prediction.user_id] ?? "User" }],
-      }));
+      const predsWithProfiles = predRes.data.map(
+        (prediction: {
+          user_id: string;
+          match_id: string;
+          predicted_home: number;
+          predicted_away: number;
+        }) => ({
+          ...prediction,
+          profiles: [{ display_name: profileMap[prediction.user_id] ?? "User" }],
+        })
+      );
 
       setPredictions(predsWithProfiles as Prediction[]);
     }
@@ -276,7 +305,11 @@ export default function AdminResultsPage() {
   }
 
   const availableGroups = [
-    ...new Set(matches.filter((match) => match.stage === "groups" && match.group_name).map((match) => match.group_name!)),
+    ...new Set(
+      matches
+        .filter((match) => match.stage === "groups" && match.group_name)
+        .map((match) => match.group_name!)
+    ),
   ].sort();
 
   const filteredMatches = matches.filter((match) => {
@@ -284,7 +317,9 @@ export default function AdminResultsPage() {
 
     if (filterStage === "groups") {
       if (filterGroup !== "all" && match.group_name !== filterGroup) return false;
-      if (filterMatchday !== "all" && match.matchday?.toString() !== filterMatchday) return false;
+      if (filterMatchday !== "all" && match.matchday?.toString() !== filterMatchday) {
+        return false;
+      }
     }
 
     if (filterStatus === "finished" && !match.is_finished) return false;
